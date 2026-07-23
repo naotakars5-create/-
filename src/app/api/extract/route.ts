@@ -1,11 +1,9 @@
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { NextResponse } from "next/server";
 import { EXTRACT_SYSTEM_PROMPT } from "@/lib/extractPrompt";
 import type { ExtractedTrip } from "@/lib/types";
 
 export const runtime = "nodejs";
-
-const client = new Anthropic();
 
 /** モデルの生テキストから最初の JSON オブジェクトを取り出してパースする */
 function parseExtracted(text: string): ExtractedTrip {
@@ -65,32 +63,38 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "text が空です" }, { status: 400 });
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json(
-      { error: "ANTHROPIC_API_KEY が設定されていません" },
+      { error: "OPENAI_API_KEY が設定されていません" },
       { status: 500 }
     );
   }
 
+  // クライアントはリクエスト時に生成（ビルド時にキー不在で失敗しないように）
+  const client = new OpenAI();
+
   try {
-    const response = await client.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1024,
-      system: EXTRACT_SYSTEM_PROMPT,
-      messages: [{ role: "user", content: text }],
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      // JSON のみを返させる（システムプロンプトにも "JSON" が含まれている必要がある）
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: EXTRACT_SYSTEM_PROMPT },
+        { role: "user", content: text },
+      ],
     });
 
-    const out = response.content.find((b) => b.type === "text");
-    if (!out || out.type !== "text") {
+    const out = completion.choices[0]?.message?.content;
+    if (!out) {
       throw new Error("モデルからテキスト応答が得られませんでした");
     }
 
-    const extracted = parseExtracted(out.text);
+    const extracted = parseExtracted(out);
     return NextResponse.json({ extracted });
   } catch (err) {
-    if (err instanceof Anthropic.APIError) {
+    if (err instanceof OpenAI.APIError) {
       return NextResponse.json(
-        { error: `Anthropic API エラー (${err.status}): ${err.message}` },
+        { error: `OpenAI API エラー (${err.status}): ${err.message}` },
         { status: 502 }
       );
     }

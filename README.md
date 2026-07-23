@@ -7,7 +7,7 @@
 
 - Next.js (App Router) + TypeScript
 - 音声入力: Web Speech API（ブラウザ標準・Chrome 想定）
-- 構造化: Anthropic API (`claude-sonnet-4-6`) にテキストを渡して JSON 抽出
+- 構造化: OpenAI API (`gpt-4o-mini`) にテキストを渡して JSON 抽出
 - Excel 書き込み: Node の `exceljs`（数式・書式・結合セルを壊さず、指定セルに値のみ書き込み）
 - PC / スマホ両対応のレスポンシブ
 
@@ -15,7 +15,7 @@
 
 ```bash
 npm install
-cp .env.example .env.local   # ANTHROPIC_API_KEY を設定
+cp .env.example .env.local   # OPENAI_API_KEY を設定
 npm run dev                  # http://localhost:3000
 ```
 
@@ -56,7 +56,7 @@ npm run dev                  # http://localhost:3000
 ## 音声入力フロー
 
 1. マイクボタンで録音 → Web Speech API でテキスト化
-2. `/api/extract` が Anthropic API で JSON 抽出（「JSON のみ返す」をプロンプトで明示）
+2. `/api/extract` が OpenAI API で JSON 抽出（「JSON のみ返す」をプロンプトで明示）
 3. 運賃マスタ・役職から補完し、**確認画面で全項目を表示・修正**（自動確定なし）
 4. 確定でリストに追加 → 「出力」タブで対象月を選び Excel をダウンロード
 

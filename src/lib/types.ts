@@ -36,7 +36,7 @@ export interface Trip {
   lodging: number; // 宿泊料 N6
 }
 
-/** Anthropic API による音声テキストの構造化結果 */
+/** OpenAI API による音声テキストの構造化結果 */
 export interface ExtractedTrip {
   month: number | null;
   day: number | null;
