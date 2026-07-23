@@ -8,6 +8,7 @@
 - Next.js (App Router) + TypeScript
 - 音声入力: Web Speech API（ブラウザ標準・Chrome 想定）
 - 構造化: OpenAI API (`gpt-4o-mini`) にテキストを渡して JSON 抽出
+- 運賃自動取得: 運賃マスタにヒットしない区間は Google Maps Directions API（経路検索）で補完（任意設定）
 - Excel 書き込み: Node の `exceljs`（数式・書式・結合セルを壊さず、指定セルに値のみ書き込み）
 - PC / スマホ両対応のレスポンシブ
 
@@ -15,7 +16,7 @@
 
 ```bash
 npm install
-cp .env.example .env.local   # OPENAI_API_KEY を設定
+cp .env.example .env.local   # OPENAI_API_KEY を設定（GOOGLE_MAPS_API_KEY は任意）
 npm run dev                  # http://localhost:3000
 ```
 
@@ -44,7 +45,11 @@ npm run dev                  # http://localhost:3000
 
 ### 分離された差し替えポイント（将来対応）
 
-- `getFare(from, to, roundTrip)` … 運賃マスタ（`src/lib/fareMaster.json`）。将来 API 連携に差し替え
+- `getFare(from, to, roundTrip)` … 運賃マスタ（`src/lib/fareMaster.json`）。ヒットしない区間は
+  `/api/fare`（Google Maps Directions API）で自動補完を試みる。それも失敗すれば従来どおり
+  空欄で手入力させる（精算金額に関わるため、失敗時に推測値は出さない）。
+  自動取得した値は `Trip.fareAuto = true` となり、確認画面に「要確認」表示が出る。
+  ユーザーが手動で金額を修正すると `fareAuto` は自動的に false に戻る。
 - `shouldPayAllowance(trip)` … 日当支給条件。現状は常に false（UI トグル）。ルール確定後に自動判定へ
 
 ## テンプレート .xlsx について

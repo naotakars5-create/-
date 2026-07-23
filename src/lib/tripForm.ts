@@ -19,6 +19,7 @@ export function emptyTrip(): Trip {
     purpose: "",
     route: "",
     fare: null,
+    fareAuto: false,
     transitCompany: "",
     tollParking: 0,
     taxi: 0,
@@ -57,6 +58,7 @@ export function draftFromExtracted(e: ExtractedTrip, position: Position): Trip {
     purpose: e.purpose ?? "",
     route,
     fare,
+    fareAuto: false, // 運賃マスタからの補完は確度が高いため要確認扱いにしない
     transitCompany: e.transitCompany ?? "",
     tollParking: e.tollParking,
     taxi: e.taxi,

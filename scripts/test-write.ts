@@ -17,6 +17,7 @@ function makeTrip(partial: Partial<Trip> & Pick<Trip, "id" | "month" | "day">): 
     purpose: "",
     route: "",
     fare: null,
+    fareAuto: false,
     transitCompany: "",
     tollParking: 0,
     taxi: 0,

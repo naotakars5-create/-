@@ -27,6 +27,7 @@ export interface Trip {
   purpose: string; // 用務 E8
   route: string; // 経路 G6（例: 千葉-鎌ケ谷大仏(往復)）
   fare: number | null; // 鉄道・バス運賃 H6（null = 未入力）
+  fareAuto: boolean; // true = 運賃マスタ以外（Google Maps等）から自動取得した値。要確認の目印
   transitCompany: string; // 利用会社 I6
   tollParking: number; // 有料道路・駐車場代 J6
   taxi: number; // タクシー代 K6

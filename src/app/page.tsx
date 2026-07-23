@@ -131,7 +131,29 @@ function InputScreen({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "抽出に失敗しました");
-      setDraft(draftFromExtracted(data.extracted, position));
+
+      let draft = draftFromExtracted(data.extracted, position);
+
+      // 運賃マスタでヒットしなければ、Google Maps 経路検索で運賃取得を試みる。
+      // 見つからなくても致命的ではない（従来どおり空欄で手入力）。
+      const { routeFrom, routeTo, roundTrip } = data.extracted;
+      if (draft.fare == null && routeFrom && routeTo) {
+        try {
+          const fareRes = await fetch("/api/fare", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ from: routeFrom, to: routeTo, roundTrip }),
+          });
+          const fareData = await fareRes.json();
+          if (fareRes.ok && typeof fareData.fare === "number") {
+            draft = { ...draft, fare: fareData.fare, fareAuto: true };
+          }
+        } catch {
+          // 運賃検索の失敗は無視し、従来どおり手入力に任せる
+        }
+      }
+
+      setDraft(draft);
     } catch (e) {
       setError(e instanceof Error ? e.message : "抽出に失敗しました");
     } finally {

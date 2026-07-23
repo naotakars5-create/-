@@ -65,8 +65,18 @@ export default function TripFormFields({ trip, onChange }: Props) {
             type="number"
             value={trip.fare ?? ""}
             placeholder="手入力"
-            onChange={(e) => onChange({ fare: e.target.value === "" ? null : num(e.target.value) })}
+            onChange={(e) =>
+              onChange({
+                fare: e.target.value === "" ? null : num(e.target.value),
+                fareAuto: false, // 手入力で上書きしたら「要確認」表示は消す
+              })
+            }
           />
+          {trip.fareAuto && (
+            <div className="notice info" style={{ marginTop: 6, padding: "6px 10px" }}>
+              🔍 Google マップの経路検索から自動取得した金額です。念のためご確認ください。
+            </div>
+          )}
         </div>
         <div className="field">
           <label>利用会社</label>
