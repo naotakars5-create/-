@@ -131,6 +131,8 @@ function InputScreen({
   onAddAll: (trips: Trip[]) => void;
 }) {
   const [drafts, setDrafts] = useState<Trip[]>([]);
+  // 履歴から選んで追加した下書きの ID。これらは日付以外をロックする（内容は登録時のまま）。
+  const [lockedIds, setLockedIds] = useState<Set<string>>(new Set());
 
   const historyValues = useMemo(
     () => ({
@@ -145,7 +147,9 @@ function InputScreen({
   );
 
   function addFromHistory(entry: TripHistoryEntry) {
-    setDrafts((prev) => [...prev, tripFromHistory(entry, newId())]);
+    const id = newId();
+    setDrafts((prev) => [...prev, tripFromHistory(entry, id)]);
+    setLockedIds((prev) => new Set(prev).add(id)); // 選んで追加したものは日付だけ変更可
   }
   function addEmpty() {
     // 日当額は現在の役職設定から初期値として補完する（0円のまま出さない）
@@ -156,6 +160,22 @@ function InputScreen({
   }
   function removeDraft(id: string) {
     setDrafts((prev) => prev.filter((d) => d.id !== id));
+    setLockedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }
+  function unlockDraft(id: string) {
+    setLockedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }
+  function clearDrafts() {
+    setDrafts([]);
+    setLockedIds(new Set());
   }
 
   const draftsTotal = useMemo(() => totalAmount(drafts), [drafts]);
@@ -164,7 +184,7 @@ function InputScreen({
     <div>
       {history.length > 0 && (
         <div className="card">
-          <label>過去に選択した出張から選ぶ（日付は今日の日付で追加されるので、あとは日だけ変更してください）</label>
+          <label>過去に追加した出張から選ぶ（選ぶと今日の日付で追加され、日付だけ変更できます）</label>
           <div className="row">
             {history.map((h, i) => (
               <button
@@ -192,35 +212,46 @@ function InputScreen({
           <div className="notice info">
             {drafts.length}件の出張候補があります。内容を確認・修正してから登録してください（自動確定はしません）。
           </div>
-          {drafts.map((d, i) => (
-            <div key={d.id} className="card">
-              <div className="row" style={{ justifyContent: "space-between", marginBottom: 8 }}>
-                <strong>候補 {i + 1}</strong>
-                <button className="btn danger" onClick={() => removeDraft(d.id)}>
-                  この項目を削除
-                </button>
+          {drafts.map((d, i) => {
+            const locked = lockedIds.has(d.id);
+            return (
+              <div key={d.id} className="card">
+                <div className="row" style={{ justifyContent: "space-between", marginBottom: 8 }}>
+                  <strong>候補 {i + 1}</strong>
+                  <div className="row">
+                    {locked && (
+                      <button className="btn ghost" onClick={() => unlockDraft(d.id)}>
+                        内容も修正する
+                      </button>
+                    )}
+                    <button className="btn danger" onClick={() => removeDraft(d.id)}>
+                      この項目を削除
+                    </button>
+                  </div>
+                </div>
+                <TripFormFields
+                  trip={d}
+                  onChange={(patch) => patchDraft(d.id, patch)}
+                  historyValues={historyValues}
+                  dateOnly={locked}
+                />
+                <div className="total">小計: {tripTotal(d).toLocaleString()} 円</div>
               </div>
-              <TripFormFields
-                trip={d}
-                onChange={(patch) => patchDraft(d.id, patch)}
-                historyValues={historyValues}
-              />
-              <div className="total">小計: {tripTotal(d).toLocaleString()} 円</div>
-            </div>
-          ))}
+            );
+          })}
           <div className="card">
             <div className="row" style={{ justifyContent: "flex-end" }}>
               <div className="total" style={{ marginRight: "auto" }}>
                 候補の合計: {draftsTotal.toLocaleString()} 円
               </div>
-              <button className="btn ghost" onClick={() => setDrafts([])}>
+              <button className="btn ghost" onClick={clearDrafts}>
                 すべて破棄
               </button>
               <button
                 className="btn"
                 onClick={() => {
                   onAddAll(drafts);
-                  setDrafts([]);
+                  clearDrafts();
                 }}
               >
                 すべてリストに追加

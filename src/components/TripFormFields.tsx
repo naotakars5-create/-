@@ -17,6 +17,8 @@ interface Props {
   trip: Trip;
   onChange: (patch: Partial<Trip>) => void;
   historyValues?: HistoryValues;
+  /** true のとき、日付（月・日）以外の項目を編集不可にする（履歴から選んだ出張向け） */
+  dateOnly?: boolean;
 }
 
 function DataList({ id, values }: { id: string; values?: string[] }) {
@@ -31,8 +33,9 @@ function DataList({ id, values }: { id: string; values?: string[] }) {
 }
 
 /** 出張1件の編集フォーム（確認画面・一覧編集で共用） */
-export default function TripFormFields({ trip, onChange, historyValues }: Props) {
+export default function TripFormFields({ trip, onChange, historyValues, dateOnly }: Props) {
   const num = (v: string) => (v === "" ? 0 : Math.round(Number(v)) || 0);
+  const lock = dateOnly === true; // 日付以外をロックするか
   const uid = useId();
   const dl = {
     destination: `${uid}-destination`,
@@ -44,6 +47,12 @@ export default function TripFormFields({ trip, onChange, historyValues }: Props)
   };
   return (
     <div>
+      {lock && (
+        <div className="notice info" style={{ marginBottom: 12 }}>
+          📌 履歴から選んだ出張です。<strong>日付だけ</strong>変更できます（内容は登録時のまま）。
+          内容も直したい場合は下の「内容も修正する」を押してください。
+        </div>
+      )}
       <div className="grid3">
         <div className="field">
           <label>月</label>
@@ -70,6 +79,7 @@ export default function TripFormFields({ trip, onChange, historyValues }: Props)
           <input
             value={trip.destination}
             list={dl.destination}
+            disabled={lock}
             onChange={(e) => onChange({ destination: e.target.value })}
           />
           <DataList id={dl.destination} values={historyValues?.destination} />
@@ -82,6 +92,7 @@ export default function TripFormFields({ trip, onChange, historyValues }: Props)
           <input
             value={trip.visitTo}
             list={dl.visitTo}
+            disabled={lock}
             onChange={(e) => onChange({ visitTo: e.target.value })}
           />
           <DataList id={dl.visitTo} values={historyValues?.visitTo} />
@@ -91,6 +102,7 @@ export default function TripFormFields({ trip, onChange, historyValues }: Props)
           <input
             value={trip.purpose}
             list={dl.purpose}
+            disabled={lock}
             onChange={(e) => onChange({ purpose: e.target.value })}
           />
           <DataList id={dl.purpose} values={historyValues?.purpose} />
@@ -102,6 +114,7 @@ export default function TripFormFields({ trip, onChange, historyValues }: Props)
         <input
           value={trip.route}
           list={dl.route}
+          disabled={lock}
           onChange={(e) => onChange({ route: e.target.value })}
         />
         <DataList id={dl.route} values={historyValues?.route} />
@@ -109,11 +122,12 @@ export default function TripFormFields({ trip, onChange, historyValues }: Props)
 
       <div className="grid2">
         <div className="field">
-          <label>鉄道・バス運賃（円）{trip.fare == null && " ※マスタ未ヒット・要手入力"}</label>
+          <label>鉄道・バス運賃（円）{trip.fare == null && !lock && " ※マスタ未ヒット・要手入力"}</label>
           <input
             type="number"
             value={trip.fare ?? ""}
             placeholder="手入力"
+            disabled={lock}
             onChange={(e) =>
               onChange({
                 fare: e.target.value === "" ? null : num(e.target.value),
@@ -121,7 +135,7 @@ export default function TripFormFields({ trip, onChange, historyValues }: Props)
               })
             }
           />
-          {trip.fareAuto && (
+          {trip.fareAuto && !lock && (
             <div className="notice info" style={{ marginTop: 6, padding: "6px 10px" }}>
               🔍 Google マップの経路検索から自動取得した金額です。念のためご確認ください。
             </div>
@@ -132,6 +146,7 @@ export default function TripFormFields({ trip, onChange, historyValues }: Props)
           <input
             value={trip.transitCompany}
             list={dl.transitCompany}
+            disabled={lock}
             onChange={(e) => onChange({ transitCompany: e.target.value })}
           />
           <DataList id={dl.transitCompany} values={historyValues?.transitCompany} />
@@ -144,6 +159,7 @@ export default function TripFormFields({ trip, onChange, historyValues }: Props)
           <input
             type="number"
             value={trip.tollParking}
+            disabled={lock}
             onChange={(e) => onChange({ tollParking: num(e.target.value) })}
           />
         </div>
@@ -152,6 +168,7 @@ export default function TripFormFields({ trip, onChange, historyValues }: Props)
           <input
             type="number"
             value={trip.taxi}
+            disabled={lock}
             onChange={(e) => onChange({ taxi: num(e.target.value) })}
           />
         </div>
@@ -160,6 +177,7 @@ export default function TripFormFields({ trip, onChange, historyValues }: Props)
           <input
             value={trip.taxiCompany}
             list={dl.taxiCompany}
+            disabled={lock}
             onChange={(e) => onChange({ taxiCompany: e.target.value })}
           />
           <DataList id={dl.taxiCompany} values={historyValues?.taxiCompany} />
@@ -172,6 +190,7 @@ export default function TripFormFields({ trip, onChange, historyValues }: Props)
           <input
             type="number"
             value={trip.lodging}
+            disabled={lock}
             onChange={(e) => onChange({ lodging: num(e.target.value) })}
           />
         </div>
@@ -181,6 +200,7 @@ export default function TripFormFields({ trip, onChange, historyValues }: Props)
             <input
               type="checkbox"
               checked={trip.payAllowance}
+              disabled={lock}
               onChange={(e) => onChange({ payAllowance: e.target.checked })}
             />
             日当を付ける
