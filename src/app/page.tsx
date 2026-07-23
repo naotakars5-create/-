@@ -24,6 +24,27 @@ export default function Page() {
     position: "一般職員",
   });
   const [trips, setTrips] = useState<Trip[]>([]);
+  // 出力対象として選択されている出張の ID（一覧のチェックボックス）
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+  function setAllSelected(ids: string[], on: boolean) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) {
+        if (on) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+  }
 
   // 過去に選択した出張パターンの履歴（localStorage。ブラウザ内のみ、サーバには送らない）
   const [history, setHistory] = useState<TripHistoryEntry[]>([]);
@@ -40,6 +61,8 @@ export default function Page() {
   }
 
   const total = useMemo(() => totalAmount(trips), [trips]);
+  // 出力対象として選択されている出張だけを抜き出す
+  const selectedTrips = useMemo(() => trips.filter((t) => selectedIds.has(t.id)), [trips, selectedIds]);
 
   return (
     <div className="container">
@@ -70,14 +93,30 @@ export default function Page() {
           history={history}
           onAddAll={(newTrips) => {
             setTrips((prev) => [...prev, ...newTrips]);
+            // 追加した出張はデフォルトで出力対象に含める
+            setSelectedIds((prev) => {
+              const next = new Set(prev);
+              newTrips.forEach((t) => next.add(t.id));
+              return next;
+            });
             recordHistory(newTrips);
             setHistory(loadHistory());
             setTab("list");
           }}
         />
       )}
-      {tab === "list" && <ListScreen trips={trips} total={total} onChange={setTrips} />}
-      {tab === "output" && <OutputScreen profile={profile} trips={trips} total={total} />}
+      {tab === "list" && (
+        <ListScreen
+          trips={trips}
+          total={total}
+          onChange={setTrips}
+          selectedIds={selectedIds}
+          onToggleSelected={toggleSelected}
+          onSetAllSelected={setAllSelected}
+          onGoOutput={() => setTab("output")}
+        />
+      )}
+      {tab === "output" && <OutputScreen profile={profile} selectedTrips={selectedTrips} />}
     </div>
   );
 }
@@ -280,10 +319,18 @@ function ListScreen({
   trips,
   total,
   onChange,
+  selectedIds,
+  onToggleSelected,
+  onSetAllSelected,
+  onGoOutput,
 }: {
   trips: Trip[];
   total: number;
   onChange: (t: Trip[]) => void;
+  selectedIds: Set<string>;
+  onToggleSelected: (id: string) => void;
+  onSetAllSelected: (ids: string[], on: boolean) => void;
+  onGoOutput: () => void;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -299,26 +346,53 @@ function ListScreen({
     return <div className="card muted">まだ出張が登録されていません。「入力」タブから追加してください。</div>;
   }
 
+  const selectedTrips = trips.filter((t) => selectedIds.has(t.id));
+  const selectedCount = selectedTrips.length;
+  const selectedTotal = totalAmount(selectedTrips);
+  const allIds = trips.map((t) => t.id);
+  const allSelected = selectedCount === trips.length;
+
   return (
     <div>
       <div className="card">
-        <div className="row" style={{ justifyContent: "space-between" }}>
-          <span className="muted">登録件数: {trips.length}</span>
-          <span className="total">合計プレビュー: {total.toLocaleString()} 円</span>
+        <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap" }}>
+          <span className="muted">
+            登録 {trips.length} 件 ／ チェック中 <strong>{selectedCount}</strong> 件
+          </span>
+          <span className="total">選択の合計: {selectedTotal.toLocaleString()} 円</span>
+        </div>
+        <div className="row" style={{ marginTop: 8 }}>
+          <button className="btn ghost" onClick={() => onSetAllSelected(allIds, !allSelected)}>
+            {allSelected ? "すべて外す" : "すべて選択"}
+          </button>
+          <button className="btn" onClick={onGoOutput} disabled={selectedCount === 0}>
+            チェックした {selectedCount} 件を出力する →
+          </button>
+        </div>
+        <div className="muted" style={{ marginTop: 6 }}>
+          出力したい出張（例: 今月分）にチェックを入れて「出力する」を押してください。
         </div>
       </div>
 
       {trips.map((t) => (
         <div key={t.id} className="trip-item">
           <div className="head">
-            <div>
-              <strong>
-                {t.month}/{t.day} {t.destination || "（未入力）"}
-              </strong>
-              <div className="muted">
-                {t.visitTo} {t.purpose && `／ ${t.purpose}`} ・ 小計 {tripTotal(t).toLocaleString()} 円
-              </div>
-            </div>
+            <label className="toggle" style={{ alignItems: "flex-start", flex: 1 }}>
+              <input
+                type="checkbox"
+                checked={selectedIds.has(t.id)}
+                onChange={() => onToggleSelected(t.id)}
+                style={{ marginTop: 4 }}
+              />
+              <span>
+                <strong>
+                  {t.month}/{t.day} {t.destination || "（未入力）"}
+                </strong>
+                <div className="muted">
+                  {t.visitTo} {t.purpose && `／ ${t.purpose}`} ・ 小計 {tripTotal(t).toLocaleString()} 円
+                </div>
+              </span>
+            </label>
             <div className="row">
               <button
                 className="btn ghost"
@@ -344,22 +418,25 @@ function ListScreen({
 
 function OutputScreen({
   profile,
-  trips,
-  total,
+  selectedTrips,
 }: {
   profile: UserProfile;
-  trips: Trip[];
-  total: number;
+  selectedTrips: Trip[];
 }) {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth() + 1);
   const [claimDate, setClaimDate] = useState(now.toISOString().slice(0, 10));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
 
-  const targetTrips = trips.filter((t) => t.month === month);
+  const selectedTotal = totalAmount(selectedTrips);
+  // 含まれる月ごとの件数（プレビュー表示用）
+  const byMonth = useMemo(() => {
+    const m = new Map<number, number>();
+    for (const t of selectedTrips) m.set(t.month, (m.get(t.month) ?? 0) + 1);
+    return [...m.entries()].sort((a, b) => a[0] - b[0]);
+  }, [selectedTrips]);
 
   async function generate() {
     setError(null);
@@ -369,7 +446,7 @@ function OutputScreen({
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profile, trips, year, month, claimDate }),
+        body: JSON.stringify({ profile, trips: selectedTrips, year, claimDate }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -383,11 +460,14 @@ function OutputScreen({
           /* ignore */
         }
       }
+      const months = [...new Set(selectedTrips.map((t) => t.month))];
+      const filename =
+        months.length === 1 ? `旅費精算書_${year}_${months[0]}.xlsx` : `旅費精算書_${year}.xlsx`;
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `旅費精算書_${year}_${month}.xlsx`;
+      a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
@@ -397,22 +477,20 @@ function OutputScreen({
     }
   }
 
+  if (selectedTrips.length === 0) {
+    return (
+      <div className="card muted">
+        出力する出張が選択されていません。「一覧」タブで出力したい出張にチェックを入れてください。
+      </div>
+    );
+  }
+
   return (
     <div className="card">
-      <div className="grid3">
+      <div className="grid2">
         <div className="field">
-          <label>対象年</label>
+          <label>対象年（シートの年）</label>
           <input type="number" value={year} onChange={(e) => setYear(Number(e.target.value))} />
-        </div>
-        <div className="field">
-          <label>対象月</label>
-          <input
-            type="number"
-            min={1}
-            max={12}
-            value={month}
-            onChange={(e) => setMonth(Number(e.target.value))}
-          />
         </div>
         <div className="field">
           <label>請求日</label>
@@ -421,9 +499,11 @@ function OutputScreen({
       </div>
 
       <div className="notice info">
-        {month}月の対象出張: {targetTrips.length} 件 ／ 全体合計: {total.toLocaleString()} 円
+        出力対象: <strong>{selectedTrips.length} 件</strong>（
+        {byMonth.map(([m, c]) => `${m}月 ${c}件`).join(" / ")}） ／ 合計{" "}
+        {selectedTotal.toLocaleString()} 円
         <br />
-        前半（1〜15日）と後半（16〜31日）で自動的にシートを分けます。1シート6件を超えると次シートへ、それも超えると警告します。
+        月ごと・前半（1〜15日）/後半（16〜31日）で自動的にシートを分けます。1シート6件を超えると超過分は警告します。
       </div>
 
       {error && <div className="notice error">{error}</div>}
@@ -433,7 +513,7 @@ function OutputScreen({
         </div>
       ))}
 
-      <button className="btn" onClick={generate} disabled={busy || targetTrips.length === 0}>
+      <button className="btn" onClick={generate} disabled={busy}>
         {busy ? "生成中…" : "Excelを生成してダウンロード"}
       </button>
     </div>

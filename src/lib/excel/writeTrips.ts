@@ -81,26 +81,38 @@ export interface GenerateResult {
 }
 
 /**
- * 出張リストを対象年月・前半/後半でシートに振り分けて書き込み、
- * .xlsx バッファを返す。6件を超えたら次シート、それも超えたら警告。
+ * 選択された出張リストを、各出張の月・前半/後半ごとにシートへ振り分けて
+ * 書き込み、.xlsx バッファを返す。1シート6件を超えたら警告。
+ * （どの出張を出力するかは呼び出し側で選択済みの前提。ここでは月での絞り込みはしない）
  */
 export async function generateWorkbook(req: GenerateRequest): Promise<GenerateResult> {
   const { wb, fromFile } = await loadOrBuildWorkbook();
   const warnings: string[] = [];
 
-  // 対象年月に一致し、前半/後半へ振り分け
-  const buckets: Record<1 | 2, Trip[]> = { 1: [], 2: [] };
+  // (月, 前半/後半) ごとに振り分ける
+  const buckets = new Map<string, Trip[]>(); // key: `${month}_${half}`
   for (const t of req.trips) {
-    if (t.month !== req.month) continue;
-    buckets[halfOf(t.day)].push(t);
+    const key = `${t.month}_${halfOf(t.day)}`;
+    const arr = buckets.get(key);
+    if (arr) arr.push(t);
+    else buckets.set(key, [t]);
   }
 
-  for (const half of [1, 2] as const) {
-    const trips = buckets[half].sort((a, b) => a.day - b.day);
-    if (trips.length === 0) continue;
+  // 月 → 前半 → 後半 の順にシートを作る
+  const keys = [...buckets.keys()].sort((a, b) => {
+    const [ma, ha] = a.split("_").map(Number);
+    const [mb, hb] = b.split("_").map(Number);
+    return ma - mb || ha - hb;
+  });
 
-    const name = sheetName(req.year, req.month, half);
+  const writtenNames = new Set<string>();
+  for (const key of keys) {
+    const [month, half] = key.split("_").map(Number) as [number, 1 | 2];
+    const trips = buckets.get(key)!.sort((a, b) => a.day - b.day);
+
+    const name = sheetName(req.year, month, half);
     const ws = ensureSheet(wb, name, fromFile);
+    writtenNames.add(name);
     writeHeader(ws, req);
 
     trips.forEach((trip, i) => {
@@ -113,6 +125,11 @@ export async function generateWorkbook(req: GenerateRequest): Promise<GenerateRe
         `シート ${name}: ${trips.length}件の出張がありますが、1シートに書けるのは${MAX_TRIPS_PER_SHEET}件までです。${trips.length - MAX_TRIPS_PER_SHEET}件が書き込まれませんでした。`
       );
     }
+  }
+
+  // テンプレ由来の空の雛形シートなど、今回書き込まなかったシートは出力から除去する
+  for (const ws of [...wb.worksheets]) {
+    if (!writtenNames.has(ws.name)) wb.removeWorksheet(ws.id);
   }
 
   const arrayBuffer = await wb.xlsx.writeBuffer();

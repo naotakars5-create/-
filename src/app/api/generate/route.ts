@@ -15,10 +15,18 @@ export async function POST(request: Request) {
   if (!req?.profile || !Array.isArray(req.trips)) {
     return NextResponse.json({ error: "profile / trips が不正です" }, { status: 400 });
   }
+  if (req.trips.length === 0) {
+    return NextResponse.json({ error: "出力する出張が選択されていません" }, { status: 400 });
+  }
 
   try {
     const { buffer, warnings } = await generateWorkbook(req);
-    const filename = `旅費精算書_${req.year}_${req.month}.xlsx`;
+    // ファイル名は含まれる月から決める（1か月なら _M、複数月なら年のみ）
+    const months = [...new Set(req.trips.map((t) => t.month))];
+    const filename =
+      months.length === 1
+        ? `旅費精算書_${req.year}_${months[0]}.xlsx`
+        : `旅費精算書_${req.year}.xlsx`;
     return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {

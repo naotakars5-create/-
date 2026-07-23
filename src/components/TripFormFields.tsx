@@ -1,7 +1,10 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useState } from "react";
 import type { Trip } from "@/lib/types";
+
+/** 用務の選択肢（「その他」を選ぶと自由入力になる） */
+const PURPOSE_PRESETS = ["顧客打ち合わせ", "ロケ"] as const;
 
 /** 入力欄のオートコンプリート候補（履歴から集めたユニーク値。省略時は候補なし） */
 interface HistoryValues {
@@ -37,6 +40,21 @@ export default function TripFormFields({ trip, onChange, historyValues, dateOnly
   const num = (v: string) => (v === "" ? 0 : Math.round(Number(v)) || 0);
   const lock = dateOnly === true; // 日付以外をロックするか
   const uid = useId();
+
+  // 用務: 現在値がプリセット以外（かつ空でない）なら「その他」の自由入力とみなす
+  const purposeIsPreset = (PURPOSE_PRESETS as readonly string[]).includes(trip.purpose);
+  const [purposeOther, setPurposeOther] = useState(!purposeIsPreset && trip.purpose !== "");
+  const purposeSelectValue = purposeOther ? "その他" : purposeIsPreset ? trip.purpose : "";
+  function handlePurposeSelect(v: string) {
+    if (v === "その他") {
+      setPurposeOther(true);
+      onChange({ purpose: "" }); // 自由入力欄に入れてもらうため一旦クリア
+    } else {
+      setPurposeOther(false);
+      onChange({ purpose: v }); // プリセット、または「選択してください」なら空
+    }
+  }
+
   const dl = {
     destination: `${uid}-destination`,
     visitTo: `${uid}-visitTo`,
@@ -99,12 +117,26 @@ export default function TripFormFields({ trip, onChange, historyValues, dateOnly
         </div>
         <div className="field">
           <label>用務</label>
-          <input
-            value={trip.purpose}
-            list={dl.purpose}
+          <select
+            value={purposeSelectValue}
             disabled={lock}
-            onChange={(e) => onChange({ purpose: e.target.value })}
-          />
+            onChange={(e) => handlePurposeSelect(e.target.value)}
+          >
+            <option value="">選択してください</option>
+            <option value="顧客打ち合わせ">顧客打ち合わせ</option>
+            <option value="ロケ">ロケ</option>
+            <option value="その他">その他</option>
+          </select>
+          {purposeOther && (
+            <input
+              style={{ marginTop: 6 }}
+              value={trip.purpose}
+              list={dl.purpose}
+              disabled={lock}
+              placeholder="用務を入力"
+              onChange={(e) => onChange({ purpose: e.target.value })}
+            />
+          )}
           <DataList id={dl.purpose} values={historyValues?.purpose} />
         </div>
       </div>

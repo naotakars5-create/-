@@ -65,7 +65,6 @@ async function main() {
     profile: { name: "山田太郎", department: "営業部", position },
     trips,
     year: 2026,
-    month: 6,
     claimDate: "2026-07-01",
   });
 

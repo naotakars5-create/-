@@ -37,11 +37,10 @@ export interface Trip {
   lodging: number; // 宿泊料 N6
 }
 
-/** Excel 生成リクエスト */
+/** Excel 生成リクエスト。trips は「出力対象として選択された出張」。 */
 export interface GenerateRequest {
   profile: UserProfile;
   trips: Trip[];
-  year: number; // 対象年（西暦）
-  month: number; // 対象月
+  year: number; // 対象年（西暦）。シート名 YYYY_M_half の年に使う
   claimDate: string; // 請求日 ISO (yyyy-mm-dd)
 }
