@@ -37,22 +37,6 @@ export interface Trip {
   lodging: number; // 宿泊料 N6
 }
 
-/** OpenAI API による音声テキストの構造化結果 */
-export interface ExtractedTrip {
-  month: number | null;
-  day: number | null;
-  destination: string | null;
-  visitTo: string | null;
-  purpose: string | null;
-  routeFrom: string | null;
-  routeTo: string | null;
-  roundTrip: boolean;
-  transitCompany: string | null;
-  tollParking: number;
-  taxi: number;
-  lodging: number;
-}
-
 /** Excel 生成リクエスト */
 export interface GenerateRequest {
   profile: UserProfile;

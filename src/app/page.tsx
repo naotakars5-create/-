@@ -3,10 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import TripFormFields from "@/components/TripFormFields";
 import { getAllowance } from "@/lib/allowance";
-import { useSpeech } from "@/lib/useSpeech";
 import { loadHistory, recordHistory, tripFromHistory, uniqueValues, type TripHistoryEntry } from "@/lib/history";
-import { draftFromExtracted, emptyTrip, totalAmount, tripTotal } from "@/lib/tripForm";
-import { POSITIONS, type ExtractedTrip, type Position, type Trip, type UserProfile } from "@/lib/types";
+import { emptyTrip, totalAmount, tripTotal } from "@/lib/tripForm";
+import { POSITIONS, type Position, type Trip, type UserProfile } from "@/lib/types";
+
+function newId(): string {
+  return typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`;
+}
 
 type Tab = "settings" | "input" | "list" | "output";
 
@@ -32,7 +35,7 @@ export default function Page() {
   return (
     <div className="container">
       <header>
-        <h1>旅費精算書 音声入力アプリ</h1>
+        <h1>旅費精算書 入力アプリ</h1>
         <p>プロトタイプ / データはブラウザ内のみ・サーバ保存なし</p>
       </header>
 
@@ -127,9 +130,6 @@ function InputScreen({
   history: TripHistoryEntry[];
   onAddAll: (trips: Trip[]) => void;
 }) {
-  const speech = useSpeech();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Trip[]>([]);
 
   const historyValues = useMemo(
@@ -145,59 +145,12 @@ function InputScreen({
   );
 
   function addFromHistory(entry: TripHistoryEntry) {
-    const id = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`;
-    setDrafts((prev) => [...prev, tripFromHistory(entry, id)]);
+    setDrafts((prev) => [...prev, tripFromHistory(entry, newId())]);
   }
-
-  /** 運賃マスタでヒットしなければ Google Maps 経路検索を試す。失敗しても致命的ではない */
-  async function tryFillFare(draft: Trip, routeFrom: string | null, routeTo: string | null, roundTrip: boolean): Promise<Trip> {
-    if (draft.fare != null || !routeFrom || !routeTo) return draft;
-    try {
-      const fareRes = await fetch("/api/fare", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ from: routeFrom, to: routeTo, roundTrip }),
-      });
-      const fareData = await fareRes.json();
-      if (fareRes.ok && typeof fareData.fare === "number") {
-        return { ...draft, fare: fareData.fare, fareAuto: true };
-      }
-    } catch {
-      // 運賃検索の失敗は無視し、従来どおり手入力に任せる
-    }
-    return draft;
+  function addEmpty() {
+    // 日当額は現在の役職設定から初期値として補完する（0円のまま出さない）
+    setDrafts((prev) => [...prev, { ...emptyTrip(), allowance: getAllowance(position) }]);
   }
-
-  async function extract() {
-    setError(null);
-    setLoading(true);
-    try {
-      const res = await fetch("/api/extract", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: speech.transcript }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "抽出に失敗しました");
-
-      // 1回の発言に複数の出張が含まれることがあるため、trips は常に配列で返る。
-      // それぞれ独立して運賃補完を行う（1件でも並列処理で問題ない）。
-      const extractedList = data.trips as ExtractedTrip[];
-      const newDrafts = await Promise.all(
-        extractedList.map(async (extracted) => {
-          const draft = draftFromExtracted(extracted, position);
-          return tryFillFare(draft, extracted.routeFrom, extracted.routeTo, extracted.roundTrip);
-        })
-      );
-
-      setDrafts((prev) => [...prev, ...newDrafts]);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "抽出に失敗しました");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   function patchDraft(id: string, patch: Partial<Trip>) {
     setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, ...patch } : d)));
   }
@@ -209,55 +162,9 @@ function InputScreen({
 
   return (
     <div>
-      <div className="card">
-        <div className="row" style={{ justifyContent: "center", marginBottom: 12 }}>
-          <button
-            className={`btn mic ${speech.recording ? "recording" : ""}`}
-            onClick={() => (speech.recording ? speech.stop() : speech.start())}
-            title={speech.recording ? "停止" : "録音開始"}
-          >
-            {speech.recording ? "■" : "🎤"}
-          </button>
-        </div>
-        {!speech.supported && (
-          <div className="notice error">
-            このブラウザは音声入力に非対応です。下のテキスト欄に手入力してください（手入力でも動作します）。
-          </div>
-        )}
-        {speech.error && <div className="notice error">{speech.error}</div>}
-
-        <div className="field">
-          <label>認識テキスト（編集可・複数の出張をまとめて話しても構いません）</label>
-          <textarea
-            value={speech.transcript}
-            placeholder="例: 6月12日、鎌ケ谷巧業に顧客打ち合わせ、千葉から鎌ケ谷大仏往復。あと7月5日は幕張の取引先訪問で…"
-            onChange={(e) => speech.setTranscript(e.target.value)}
-          />
-        </div>
-        <div className="row">
-          <button className="btn" onClick={extract} disabled={loading || !speech.transcript.trim()}>
-            {loading ? "抽出中…" : "AIで項目を抽出"}
-          </button>
-          <button className="btn ghost" onClick={() => speech.reset()}>
-            クリア
-          </button>
-          <button
-            className="btn secondary"
-            onClick={() => setDrafts((prev) => [...prev, emptyTrip()])}
-          >
-            手入力で追加
-          </button>
-        </div>
-        {error && (
-          <div className="notice error" style={{ marginTop: 12 }}>
-            {error}
-          </div>
-        )}
-      </div>
-
       {history.length > 0 && (
         <div className="card">
-          <label>過去に選択した出張から選ぶ（日付は今日の日付で追加されます）</label>
+          <label>過去に選択した出張から選ぶ（日付は今日の日付で追加されるので、あとは日だけ変更してください）</label>
           <div className="row">
             {history.map((h, i) => (
               <button
@@ -273,6 +180,12 @@ function InputScreen({
           </div>
         </div>
       )}
+
+      <div className="card">
+        <button className="btn" onClick={addEmpty}>
+          ＋ 新しい出張を追加
+        </button>
+      </div>
 
       {drafts.length > 0 && (
         <>
@@ -308,7 +221,6 @@ function InputScreen({
                 onClick={() => {
                   onAddAll(drafts);
                   setDrafts([]);
-                  speech.reset();
                 }}
               >
                 すべてリストに追加
