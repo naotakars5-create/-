@@ -1,15 +1,47 @@
 "use client";
 
+import { useId } from "react";
 import type { Trip } from "@/lib/types";
+
+/** 入力欄のオートコンプリート候補（履歴から集めたユニーク値。省略時は候補なし） */
+interface HistoryValues {
+  destination?: string[];
+  visitTo?: string[];
+  purpose?: string[];
+  route?: string[];
+  transitCompany?: string[];
+  taxiCompany?: string[];
+}
 
 interface Props {
   trip: Trip;
   onChange: (patch: Partial<Trip>) => void;
+  historyValues?: HistoryValues;
+}
+
+function DataList({ id, values }: { id: string; values?: string[] }) {
+  if (!values || values.length === 0) return null;
+  return (
+    <datalist id={id}>
+      {values.map((v) => (
+        <option key={v} value={v} />
+      ))}
+    </datalist>
+  );
 }
 
 /** 出張1件の編集フォーム（確認画面・一覧編集で共用） */
-export default function TripFormFields({ trip, onChange }: Props) {
+export default function TripFormFields({ trip, onChange, historyValues }: Props) {
   const num = (v: string) => (v === "" ? 0 : Math.round(Number(v)) || 0);
+  const uid = useId();
+  const dl = {
+    destination: `${uid}-destination`,
+    visitTo: `${uid}-visitTo`,
+    purpose: `${uid}-purpose`,
+    route: `${uid}-route`,
+    transitCompany: `${uid}-transitCompany`,
+    taxiCompany: `${uid}-taxiCompany`,
+  };
   return (
     <div>
       <div className="grid3">
@@ -37,25 +69,42 @@ export default function TripFormFields({ trip, onChange }: Props) {
           <label>出張先（地名）</label>
           <input
             value={trip.destination}
+            list={dl.destination}
             onChange={(e) => onChange({ destination: e.target.value })}
           />
+          <DataList id={dl.destination} values={historyValues?.destination} />
         </div>
       </div>
 
       <div className="grid2">
         <div className="field">
           <label>訪問先名</label>
-          <input value={trip.visitTo} onChange={(e) => onChange({ visitTo: e.target.value })} />
+          <input
+            value={trip.visitTo}
+            list={dl.visitTo}
+            onChange={(e) => onChange({ visitTo: e.target.value })}
+          />
+          <DataList id={dl.visitTo} values={historyValues?.visitTo} />
         </div>
         <div className="field">
           <label>用務</label>
-          <input value={trip.purpose} onChange={(e) => onChange({ purpose: e.target.value })} />
+          <input
+            value={trip.purpose}
+            list={dl.purpose}
+            onChange={(e) => onChange({ purpose: e.target.value })}
+          />
+          <DataList id={dl.purpose} values={historyValues?.purpose} />
         </div>
       </div>
 
       <div className="field">
         <label>経路</label>
-        <input value={trip.route} onChange={(e) => onChange({ route: e.target.value })} />
+        <input
+          value={trip.route}
+          list={dl.route}
+          onChange={(e) => onChange({ route: e.target.value })}
+        />
+        <DataList id={dl.route} values={historyValues?.route} />
       </div>
 
       <div className="grid2">
@@ -82,8 +131,10 @@ export default function TripFormFields({ trip, onChange }: Props) {
           <label>利用会社</label>
           <input
             value={trip.transitCompany}
+            list={dl.transitCompany}
             onChange={(e) => onChange({ transitCompany: e.target.value })}
           />
+          <DataList id={dl.transitCompany} values={historyValues?.transitCompany} />
         </div>
       </div>
 
@@ -108,8 +159,10 @@ export default function TripFormFields({ trip, onChange }: Props) {
           <label>利用会社（タクシー）</label>
           <input
             value={trip.taxiCompany}
+            list={dl.taxiCompany}
             onChange={(e) => onChange({ taxiCompany: e.target.value })}
           />
+          <DataList id={dl.taxiCompany} values={historyValues?.taxiCompany} />
         </div>
       </div>
 

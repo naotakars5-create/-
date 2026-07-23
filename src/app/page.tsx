@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import TripFormFields from "@/components/TripFormFields";
 import { getAllowance } from "@/lib/allowance";
 import { useSpeech } from "@/lib/useSpeech";
+import { loadHistory, recordHistory, tripFromHistory, uniqueValues, type TripHistoryEntry } from "@/lib/history";
 import { draftFromExtracted, emptyTrip, totalAmount, tripTotal } from "@/lib/tripForm";
 import { POSITIONS, type ExtractedTrip, type Position, type Trip, type UserProfile } from "@/lib/types";
 
@@ -19,6 +20,12 @@ export default function Page() {
     position: "一般職員",
   });
   const [trips, setTrips] = useState<Trip[]>([]);
+
+  // 過去に選択した出張パターンの履歴（localStorage。ブラウザ内のみ、サーバには送らない）
+  const [history, setHistory] = useState<TripHistoryEntry[]>([]);
+  useEffect(() => {
+    setHistory(loadHistory());
+  }, []);
 
   const total = useMemo(() => totalAmount(trips), [trips]);
 
@@ -48,8 +55,11 @@ export default function Page() {
       {tab === "input" && (
         <InputScreen
           position={profile.position}
+          history={history}
           onAddAll={(newTrips) => {
             setTrips((prev) => [...prev, ...newTrips]);
+            recordHistory(newTrips);
+            setHistory(loadHistory());
             setTab("list");
           }}
         />
@@ -110,15 +120,34 @@ function Settings({
 
 function InputScreen({
   position,
+  history,
   onAddAll,
 }: {
   position: Position;
+  history: TripHistoryEntry[];
   onAddAll: (trips: Trip[]) => void;
 }) {
   const speech = useSpeech();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Trip[]>([]);
+
+  const historyValues = useMemo(
+    () => ({
+      destination: uniqueValues(history, "destination"),
+      visitTo: uniqueValues(history, "visitTo"),
+      purpose: uniqueValues(history, "purpose"),
+      route: uniqueValues(history, "route"),
+      transitCompany: uniqueValues(history, "transitCompany"),
+      taxiCompany: uniqueValues(history, "taxiCompany"),
+    }),
+    [history]
+  );
+
+  function addFromHistory(entry: TripHistoryEntry) {
+    const id = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`;
+    setDrafts((prev) => [...prev, tripFromHistory(entry, id)]);
+  }
 
   /** 運賃マスタでヒットしなければ Google Maps 経路検索を試す。失敗しても致命的ではない */
   async function tryFillFare(draft: Trip, routeFrom: string | null, routeTo: string | null, roundTrip: boolean): Promise<Trip> {
@@ -226,6 +255,25 @@ function InputScreen({
         )}
       </div>
 
+      {history.length > 0 && (
+        <div className="card">
+          <label>過去に選択した出張から選ぶ（日付は今日の日付で追加されます）</label>
+          <div className="row">
+            {history.map((h, i) => (
+              <button
+                key={i}
+                className="btn secondary"
+                onClick={() => addFromHistory(h)}
+                title={h.purpose}
+              >
+                {h.destination}
+                {h.visitTo && ` / ${h.visitTo}`}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {drafts.length > 0 && (
         <>
           <div className="notice info">
@@ -239,7 +287,11 @@ function InputScreen({
                   この項目を削除
                 </button>
               </div>
-              <TripFormFields trip={d} onChange={(patch) => patchDraft(d.id, patch)} />
+              <TripFormFields
+                trip={d}
+                onChange={(patch) => patchDraft(d.id, patch)}
+                historyValues={historyValues}
+              />
               <div className="total">小計: {tripTotal(d).toLocaleString()} 円</div>
             </div>
           ))}

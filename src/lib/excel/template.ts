@@ -14,15 +14,17 @@ const BORDER_ALL = { top: THIN, left: THIN, bottom: THIN, right: THIN };
 const MONEY_FMT = "#,##0";
 
 /**
- * 旅費精算書の1シートを既存様式に合わせて構築する。
+ * 旅費精算書の1シートを、実際に使われている過去分（.xls, 2025年7月〜2026年6月分の
+ * 25シート）を実測して得た配置・結合セル・固定文言のとおりに構築する。
  *
- * 本来は既存 .xls を変換した .xlsx をテンプレとして読み込むが、
- * リポジトリにテンプレファイルが存在しないため、実測済みのセル配置
- * （仕様書記載）どおりにコードで再現する。実ファイルが用意されたら
- * templates/template.xlsx を差し替えるだけで writeTrips 側はそのまま動く。
+ * 実測方法: アップロードされた実ファイルを xlrd で解析し、セル値・結合範囲を
+ * 全シート横断で比較。ラベル文言・会社名・請求文言（A37/A38/G1 等）は
+ * 全期間で完全に一致しており、様式の固定部分（テンプレそのもの）と判断した。
+ * 出張データ（E6等）と請求日（F37）のみがシートごとに変化するデータ部分。
  *
- * 既存ファイルで欠落していた H25 の数式（4件目ブロックの小計）は
- * ここで SUM(H21:H24) として補っている。
+ * 既存ファイルで欠落していた H25 の数式（4件目ブロックの小計、
+ * 2026_6_1 実データでも同じ欠落を確認済み）は、ここでは
+ * SUM(H21:H24) として補って生成する。
  */
 export function buildTemplateSheet(wb: Workbook, name: string): Worksheet {
   const ws = wb.addWorksheet(name, {
@@ -33,72 +35,85 @@ export function buildTemplateSheet(wb: Workbook, name: string): Worksheet {
   const widths = [4, 2.5, 4, 5, 9, 9, 16, 10, 8, 10, 9, 8, 8, 9, 6, 6];
   widths.forEach((w, i) => (ws.getColumn(i + 1).width = w));
 
-  // ---- ヘッダー部（1〜5行） ----
-  ws.mergeCells("A1:G1");
-  ws.getCell("A1").value = "旅　費　精　算　書";
+  // ---- 1行目（タイトル・所属/氏名） ----
+  ws.getCell("A1").value = "旅費精算書";
   ws.getCell("A1").font = { size: 14, bold: true };
-  ws.getCell("A1").alignment = { horizontal: "center", vertical: "middle" };
-  ws.getRow(1).height = 24;
-
-  ws.getCell("H1").value = "所属";
-  ws.mergeCells("I1:J1"); // I1 = 所属（値）
-  ws.getCell("K1").value = "氏名"; // ラベルは K1 の左…実測では K1 が値のため L? → 仕様どおり K1 を値セルとする
-  // 仕様: I1=所属（値）, K1=氏名（値）。ラベルは H1 / J1 に置く。
-  ws.getCell("K1").value = "";
+  ws.getCell("E1").value = "旅行者";
+  ws.getCell("F1").value = "所属";
+  // 実測どおりの固定文言（全期間で一致。同一組織の業務局ラベル）
+  ws.getCell("G1").value = "　　　       業務         局";
+  // I1 = 所属（値）。アプリ側が書き込む。
   ws.getCell("J1").value = "氏名";
-  ws.mergeCells("K1:M1");
+  ws.mergeCells("K1:O1"); // K1 = 氏名（値）。アプリ側が書き込む。
+  for (const addr of ["E1", "F1", "J1"]) {
+    ws.getCell(addr).font = { size: 9 };
+  }
 
-  // 列見出し（4〜5行）
-  ws.mergeCells("A4:C5");
-  ws.getCell("A4").value = "月　日";
-  ws.mergeCells("D4:F5");
-  ws.getCell("D4").value = "出張先・用務";
-  ws.mergeCells("G4:G5");
-  ws.getCell("G4").value = "経　路";
-  ws.mergeCells("H4:H5");
-  ws.getCell("H4").value = "鉄道・バス\n運賃";
-  ws.mergeCells("I4:I5");
-  ws.getCell("I4").value = "利用会社";
-  ws.mergeCells("J4:J5");
-  ws.getCell("J4").value = "有料道路・\n駐車場代";
-  ws.mergeCells("K4:K5");
-  ws.getCell("K4").value = "タクシー代";
-  ws.mergeCells("L4:L5");
-  ws.getCell("L4").value = "利用会社";
-  ws.mergeCells("M4:M5");
-  ws.getCell("M4").value = "日　当";
-  ws.mergeCells("N4:N5");
-  ws.getCell("N4").value = "宿泊料";
-  ws.mergeCells("O4:P5");
-  ws.getCell("O4").value = "計";
-  for (const addr of ["A4", "D4", "G4", "H4", "I4", "J4", "K4", "L4", "M4", "N4", "O4"]) {
+  // ---- 列見出し（2〜5行、2段構成） ----
+  ws.mergeCells("A2:C5");
+  ws.getCell("A2").value = "月日";
+  ws.mergeCells("D2:F5");
+  ws.getCell("D2").value = "出張先・用務・番組名等";
+  ws.mergeCells("G2:G5");
+  ws.getCell("G2").value = "経　　路";
+  ws.mergeCells("H2:I2");
+  ws.getCell("H2").value = "運　　　　賃　　　　等";
+  ws.mergeCells("J2:L2");
+  ws.getCell("J2").value = "車賃";
+  ws.mergeCells("M2:N2");
+  ws.getCell("M2").value = "日当・宿泊";
+  ws.mergeCells("O2:P5");
+  ws.getCell("O2").value = "計";
+
+  ws.mergeCells("H3:H5");
+  ws.getCell("H3").value = "鉄道・バス";
+  ws.mergeCells("I3:I5");
+  ws.getCell("I3").value = "利用会社";
+  ws.mergeCells("J3:J5");
+  ws.getCell("J3").value = "有料道路　　駐車場代";
+  ws.mergeCells("K3:K5");
+  ws.getCell("K3").value = "ﾀｸｼｰ代";
+  ws.mergeCells("L3:L5");
+  ws.getCell("L3").value = "利用会社";
+  ws.mergeCells("M3:M5");
+  ws.getCell("M3").value = "日当";
+  ws.mergeCells("N3:N5");
+  ws.getCell("N3").value = "宿泊料";
+
+  for (const addr of ["A2", "D2", "G2", "H2", "J2", "M2", "O2", "H3", "I3", "J3", "K3", "L3", "M3", "N3"]) {
     const c = ws.getCell(addr);
     c.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
     c.font = { size: 9 };
+    c.border = BORDER_ALL;
   }
 
-  // ---- 出張ブロック（6〜35行） ----
+  // ---- 出張ブロック（6〜35行、5行×6ブロック） ----
   for (const r of BLOCK_START_ROWS) {
     const sub = r + 4; // 小計行
 
-    // 結合セル
-    ws.mergeCells(`E${r}:F${r}`); // 出張先
-    ws.mergeCells(`E${r + 1}:F${r + 1}`); // 訪問先名
-    ws.mergeCells(`E${r + 2}:F${sub}`); // 用務
-    ws.mergeCells(`M${r}:M${r + 3}`); // 日当
-    ws.mergeCells(`N${r}:N${r + 3}`); // 宿泊料
+    // 結合セル（実測どおり）
+    ws.mergeCells(`A${r}:A${sub}`); // 月
+    ws.mergeCells(`B${r}:B${sub}`); // "/"
+    ws.mergeCells(`C${r}:C${sub}`); // 日
+    ws.mergeCells(`D${r}:D${r + 1}`); // 「出張先」ラベル
+    ws.mergeCells(`E${r}:F${r}`); // 出張先（値）
+    ws.mergeCells(`E${r + 1}:F${r + 1}`); // 訪問先名（値）
+    ws.mergeCells(`D${r + 2}:D${sub}`); // 「用 務」ラベル
+    ws.mergeCells(`E${r + 2}:F${sub}`); // 用務（値）
+    ws.mergeCells(`M${r}:M${r + 3}`); // 日当（値）
+    ws.mergeCells(`N${r}:N${r + 3}`); // 宿泊料（値）
     ws.mergeCells(`O${r}:P${sub}`); // ブロック計
+    ws.mergeCells(`M${sub}:N${sub}`); // 小計行の日当・宿泊合計
 
     // 固定ラベル
     ws.getCell(`B${r}`).value = "/";
-    ws.getCell(`B${r}`).alignment = { horizontal: "center" };
+    ws.getCell(`B${r}`).alignment = { horizontal: "center", vertical: "middle" };
     ws.getCell(`D${r}`).value = "出張先";
     ws.getCell(`D${r + 2}`).value = "用 務";
     ws.getCell(`D${r}`).font = { size: 8 };
     ws.getCell(`D${r + 2}`).font = { size: 8 };
-    ws.getCell(`G${sub}`).value = "計";
-    ws.getCell(`G${sub}`).alignment = { horizontal: "right" };
-    ws.getCell(`G${sub}`).font = { size: 9 };
+    ws.getCell(`D${r}`).alignment = { horizontal: "center", vertical: "middle" };
+    ws.getCell(`D${r + 2}`).alignment = { horizontal: "center", vertical: "middle" };
 
     // 既存数式（絶対に値で上書きしないこと）
     ws.getCell(`O${r}`).value = { formula: `SUM(H${sub}:N${sub})` };
@@ -117,6 +132,8 @@ export function buildTemplateSheet(wb: Workbook, name: string): Worksheet {
         }
       }
     }
+    ws.getCell(`A${r}`).alignment = { horizontal: "center", vertical: "middle" };
+    ws.getCell(`C${r}`).alignment = { horizontal: "center", vertical: "middle" };
     ws.getCell(`E${r}`).alignment = { vertical: "middle" };
     ws.getCell(`E${r + 1}`).alignment = { vertical: "middle" };
     ws.getCell(`E${r + 2}`).alignment = { vertical: "top", wrapText: true };
@@ -126,34 +143,46 @@ export function buildTemplateSheet(wb: Workbook, name: string): Worksheet {
   }
 
   // ---- 総計・請求部（36〜39行） ----
-  ws.getCell("L36").value = "運賃等";
-  ws.getCell("L37").value = "車賃";
-  ws.getCell("L38").value = "日当・宿泊料";
-  ws.getCell("L39").value = "計";
+  ws.mergeCells("A36:C36"); // 実測どおりの空欄枠（署名・捺印スペース）
+  ws.mergeCells("A39:C39");
+  ws.getCell("E36").value = "　　このとおり請求します。";
+  ws.getCell("I36").value = "運　賃　等";
+  ws.getCell("I37").value = "車　　　　賃";
+  ws.getCell("I38").value = "日当・宿泊";
+  ws.getCell("I39").value = "    　計";
+
   const blockSubRows = BLOCK_START_ROWS.map((r) => r + 4); // 10,15,20,25,30,35
+  ws.mergeCells("M36:O36");
   ws.getCell("M36").value = { formula: blockSubRows.map((r) => `H${r}`).join("+") };
+  ws.mergeCells("M37:O37");
   ws.getCell("M37").value = {
     formula:
       blockSubRows.map((r) => `J${r}`).join("+") +
       "+" +
       blockSubRows.map((r) => `K${r}`).join("+"),
   };
+  ws.mergeCells("M38:O38");
   ws.getCell("M38").value = { formula: blockSubRows.map((r) => `M${r}`).join("+") };
+  ws.mergeCells("M39:O39");
   ws.getCell("M39").value = { formula: "SUM(M36:O38)" };
   for (const addr of ["M36", "M37", "M38", "M39"]) {
     ws.getCell(addr).numFmt = MONEY_FMT;
     ws.getCell(addr).border = BORDER_ALL;
+    ws.getCell(addr).alignment = { horizontal: "right", vertical: "middle" };
   }
-  for (const addr of ["L36", "L37", "L38", "L39"]) {
+  for (const addr of ["I36", "I37", "I38", "I39"]) {
     ws.getCell(addr).border = BORDER_ALL;
     ws.getCell(addr).font = { size: 9 };
-    ws.getCell(addr).alignment = { horizontal: "center" };
+    ws.getCell(addr).alignment = { horizontal: "center", vertical: "middle" };
   }
 
-  ws.getCell("A36").value = "上記のとおり請求します。";
-  ws.getCell("E37").value = "請求日";
-  ws.getCell("E38").value = "請求者";
-  // F37 = 請求日（値）, G38 = 請求者名 + ㊞（値）はアプリ側で書き込む
+  // 固定文言（実測: 全25シートで完全に一致していた請求先の定型文）
+  ws.getCell("A37").value = "千葉テレビ放送株式会社";
+  ws.getCell("A38").value = "代表取締役社長　殿";
+  ws.getCell("F38").value = "請求者";
+  ws.mergeCells("F38:F39");
+  ws.mergeCells("G38:H39");
+  // F37 = 請求日（値）, G38 = 請求者名 + ㊞（値）はアプリ側が書き込む
 
   return ws;
 }
