@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import TripFormFields from "@/components/TripFormFields";
 import { getAllowance } from "@/lib/allowance";
 import { loadHistory, recordHistory, tripFromHistory, uniqueValues, type TripHistoryEntry } from "@/lib/history";
+import { loadProfile, saveProfile } from "@/lib/profile";
 import { emptyTrip, totalAmount, tripTotal } from "@/lib/tripForm";
 import { POSITIONS, type Position, type Trip, type UserProfile } from "@/lib/types";
 
@@ -26,9 +27,17 @@ export default function Page() {
 
   // 過去に選択した出張パターンの履歴（localStorage。ブラウザ内のみ、サーバには送らない）
   const [history, setHistory] = useState<TripHistoryEntry[]>([]);
+  // マウント時に保存済みの設定・履歴を復元する
   useEffect(() => {
+    setProfile(loadProfile());
     setHistory(loadHistory());
   }, []);
+
+  // 設定（氏名・所属・役職）を変更のたびにブラウザに保存する
+  function updateProfile(p: UserProfile) {
+    setProfile(p);
+    saveProfile(p);
+  }
 
   const total = useMemo(() => totalAmount(trips), [trips]);
 
@@ -36,7 +45,7 @@ export default function Page() {
     <div className="container">
       <header>
         <h1>旅費精算書 入力アプリ</h1>
-        <p>プロトタイプ / データはブラウザ内のみ・サーバ保存なし</p>
+        <p>プロトタイプ / 設定・履歴はこのブラウザに保存されます</p>
       </header>
 
       <nav className="tabs">
@@ -54,7 +63,7 @@ export default function Page() {
         </button>
       </nav>
 
-      {tab === "settings" && <Settings profile={profile} onChange={setProfile} />}
+      {tab === "settings" && <Settings profile={profile} onChange={updateProfile} />}
       {tab === "input" && (
         <InputScreen
           position={profile.position}
@@ -82,6 +91,9 @@ function Settings({
 }) {
   return (
     <div className="card">
+      <div className="notice info">
+        入力した氏名・所属・役職はこのブラウザに自動保存されます。次回から入れ直す必要はありません。
+      </div>
       <div className="grid2">
         <div className="field">
           <label>氏名</label>
