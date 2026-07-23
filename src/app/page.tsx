@@ -5,7 +5,7 @@ import TripFormFields from "@/components/TripFormFields";
 import { getAllowance } from "@/lib/allowance";
 import { useSpeech } from "@/lib/useSpeech";
 import { draftFromExtracted, emptyTrip, totalAmount, tripTotal } from "@/lib/tripForm";
-import { POSITIONS, type Position, type Trip, type UserProfile } from "@/lib/types";
+import { POSITIONS, type ExtractedTrip, type Position, type Trip, type UserProfile } from "@/lib/types";
 
 type Tab = "settings" | "input" | "list" | "output";
 
@@ -48,8 +48,8 @@ export default function Page() {
       {tab === "input" && (
         <InputScreen
           position={profile.position}
-          onAdd={(t) => {
-            setTrips((prev) => [...prev, t]);
+          onAddAll={(newTrips) => {
+            setTrips((prev) => [...prev, ...newTrips]);
             setTab("list");
           }}
         />
@@ -110,15 +110,34 @@ function Settings({
 
 function InputScreen({
   position,
-  onAdd,
+  onAddAll,
 }: {
   position: Position;
-  onAdd: (t: Trip) => void;
+  onAddAll: (trips: Trip[]) => void;
 }) {
   const speech = useSpeech();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [draft, setDraft] = useState<Trip | null>(null);
+  const [drafts, setDrafts] = useState<Trip[]>([]);
+
+  /** 運賃マスタでヒットしなければ Google Maps 経路検索を試す。失敗しても致命的ではない */
+  async function tryFillFare(draft: Trip, routeFrom: string | null, routeTo: string | null, roundTrip: boolean): Promise<Trip> {
+    if (draft.fare != null || !routeFrom || !routeTo) return draft;
+    try {
+      const fareRes = await fetch("/api/fare", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ from: routeFrom, to: routeTo, roundTrip }),
+      });
+      const fareData = await fareRes.json();
+      if (fareRes.ok && typeof fareData.fare === "number") {
+        return { ...draft, fare: fareData.fare, fareAuto: true };
+      }
+    } catch {
+      // 運賃検索の失敗は無視し、従来どおり手入力に任せる
+    }
+    return draft;
+  }
 
   async function extract() {
     setError(null);
@@ -132,34 +151,32 @@ function InputScreen({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "抽出に失敗しました");
 
-      let draft = draftFromExtracted(data.extracted, position);
+      // 1回の発言に複数の出張が含まれることがあるため、trips は常に配列で返る。
+      // それぞれ独立して運賃補完を行う（1件でも並列処理で問題ない）。
+      const extractedList = data.trips as ExtractedTrip[];
+      const newDrafts = await Promise.all(
+        extractedList.map(async (extracted) => {
+          const draft = draftFromExtracted(extracted, position);
+          return tryFillFare(draft, extracted.routeFrom, extracted.routeTo, extracted.roundTrip);
+        })
+      );
 
-      // 運賃マスタでヒットしなければ、Google Maps 経路検索で運賃取得を試みる。
-      // 見つからなくても致命的ではない（従来どおり空欄で手入力）。
-      const { routeFrom, routeTo, roundTrip } = data.extracted;
-      if (draft.fare == null && routeFrom && routeTo) {
-        try {
-          const fareRes = await fetch("/api/fare", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ from: routeFrom, to: routeTo, roundTrip }),
-          });
-          const fareData = await fareRes.json();
-          if (fareRes.ok && typeof fareData.fare === "number") {
-            draft = { ...draft, fare: fareData.fare, fareAuto: true };
-          }
-        } catch {
-          // 運賃検索の失敗は無視し、従来どおり手入力に任せる
-        }
-      }
-
-      setDraft(draft);
+      setDrafts((prev) => [...prev, ...newDrafts]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "抽出に失敗しました");
     } finally {
       setLoading(false);
     }
   }
+
+  function patchDraft(id: string, patch: Partial<Trip>) {
+    setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, ...patch } : d)));
+  }
+  function removeDraft(id: string) {
+    setDrafts((prev) => prev.filter((d) => d.id !== id));
+  }
+
+  const draftsTotal = useMemo(() => totalAmount(drafts), [drafts]);
 
   return (
     <div>
@@ -181,10 +198,10 @@ function InputScreen({
         {speech.error && <div className="notice error">{speech.error}</div>}
 
         <div className="field">
-          <label>認識テキスト（編集可）</label>
+          <label>認識テキスト（編集可・複数の出張をまとめて話しても構いません）</label>
           <textarea
             value={speech.transcript}
-            placeholder="例: 6月12日、鎌ケ谷巧業に顧客打ち合わせ、千葉から鎌ケ谷大仏往復"
+            placeholder="例: 6月12日、鎌ケ谷巧業に顧客打ち合わせ、千葉から鎌ケ谷大仏往復。あと7月5日は幕張の取引先訪問で…"
             onChange={(e) => speech.setTranscript(e.target.value)}
           />
         </div>
@@ -195,7 +212,10 @@ function InputScreen({
           <button className="btn ghost" onClick={() => speech.reset()}>
             クリア
           </button>
-          <button className="btn secondary" onClick={() => setDraft(emptyTrip())}>
+          <button
+            className="btn secondary"
+            onClick={() => setDrafts((prev) => [...prev, emptyTrip()])}
+          >
             手入力で追加
           </button>
         </div>
@@ -206,31 +226,44 @@ function InputScreen({
         )}
       </div>
 
-      {draft && (
-        <div className="card">
+      {drafts.length > 0 && (
+        <>
           <div className="notice info">
-            内容を確認・修正してから登録してください（自動確定はしません）。
+            {drafts.length}件の出張候補があります。内容を確認・修正してから登録してください（自動確定はしません）。
           </div>
-          <TripFormFields trip={draft} onChange={(patch) => setDraft({ ...draft, ...patch })} />
-          <div className="row" style={{ justifyContent: "flex-end" }}>
-            <div className="total" style={{ marginRight: "auto" }}>
-              小計: {tripTotal(draft).toLocaleString()} 円
+          {drafts.map((d, i) => (
+            <div key={d.id} className="card">
+              <div className="row" style={{ justifyContent: "space-between", marginBottom: 8 }}>
+                <strong>候補 {i + 1}</strong>
+                <button className="btn danger" onClick={() => removeDraft(d.id)}>
+                  この項目を削除
+                </button>
+              </div>
+              <TripFormFields trip={d} onChange={(patch) => patchDraft(d.id, patch)} />
+              <div className="total">小計: {tripTotal(d).toLocaleString()} 円</div>
             </div>
-            <button className="btn ghost" onClick={() => setDraft(null)}>
-              破棄
-            </button>
-            <button
-              className="btn"
-              onClick={() => {
-                onAdd(draft);
-                setDraft(null);
-                speech.reset();
-              }}
-            >
-              リストに追加
-            </button>
+          ))}
+          <div className="card">
+            <div className="row" style={{ justifyContent: "flex-end" }}>
+              <div className="total" style={{ marginRight: "auto" }}>
+                候補の合計: {draftsTotal.toLocaleString()} 円
+              </div>
+              <button className="btn ghost" onClick={() => setDrafts([])}>
+                すべて破棄
+              </button>
+              <button
+                className="btn"
+                onClick={() => {
+                  onAddAll(drafts);
+                  setDrafts([]);
+                  speech.reset();
+                }}
+              >
+                すべてリストに追加
+              </button>
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

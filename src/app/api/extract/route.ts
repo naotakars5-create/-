@@ -5,8 +5,11 @@ import type { ExtractedTrip } from "@/lib/types";
 
 export const runtime = "nodejs";
 
-/** モデルの生テキストから最初の JSON オブジェクトを取り出してパースする */
-function parseExtracted(text: string): ExtractedTrip {
+/**
+ * モデルの生テキストから { "trips": [...] } を取り出し、
+ * 各要素を正規化した配列として返す（1件のみでも配列）。
+ */
+function parseExtractedList(text: string): ExtractedTrip[] {
   let raw = text.trim();
   // 念のためコードフェンスを除去（プロンプトで禁止しているが保険）
   const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -17,7 +20,11 @@ function parseExtracted(text: string): ExtractedTrip {
     throw new Error("抽出結果に JSON オブジェクトが見つかりませんでした");
   }
   const obj = JSON.parse(raw.slice(start, end + 1));
-  return normalize(obj);
+  const list = Array.isArray(obj.trips) ? obj.trips : [];
+  if (list.length === 0) {
+    throw new Error("出張情報を抽出できませんでした。話した内容を確認してください。");
+  }
+  return list.map((item: Record<string, unknown>) => normalize(item));
 }
 
 /** 欠損項目を型に合わせて補完する */
@@ -89,8 +96,8 @@ export async function POST(request: Request) {
       throw new Error("モデルからテキスト応答が得られませんでした");
     }
 
-    const extracted = parseExtracted(out);
-    return NextResponse.json({ extracted });
+    const trips = parseExtractedList(out);
+    return NextResponse.json({ trips });
   } catch (err) {
     if (err instanceof OpenAI.APIError) {
       return NextResponse.json(
