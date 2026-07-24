@@ -7,6 +7,7 @@ const DEFAULT_PROFILE: UserProfile = {
   department: "",
   position: "一般職員",
   carUnitPrice: 0,
+  customAllowance: 0,
 };
 
 function isBrowser(): boolean {
@@ -38,6 +39,7 @@ export function loadProfile(): UserProfile {
       department: typeof p?.department === "string" ? p.department : "",
       position: isPosition(p?.position) ? p.position : "一般職員",
       carUnitPrice: typeof p?.carUnitPrice === "number" ? p.carUnitPrice : 0,
+      customAllowance: typeof p?.customAllowance === "number" ? p.customAllowance : 0,
     };
   } catch {
     return DEFAULT_PROFILE;

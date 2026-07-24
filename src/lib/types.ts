@@ -5,6 +5,7 @@ export const POSITIONS = [
   "副参事",
   "部次長・参事",
   "部長・担当部長",
+  "局次長",
   "局長",
   "担当局長",
   "役員",
@@ -18,6 +19,7 @@ export interface UserProfile {
   department: string;
   position: Position;
   carUnitPrice: number; // 自家用車の単価（円/km）。ガソリン代で毎月変わるので都度更新する
+  customAllowance: number; // 手入力の日当（固定額が無い役職＝役員など向け）
 }
 
 /** 鉄道・バス経路の1区間（出発駅・到着駅・往復・運賃） */

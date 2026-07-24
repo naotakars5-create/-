@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import DecimalInput from "@/components/DecimalInput";
 import TripFormFields from "@/components/TripFormFields";
-import { getAllowance } from "@/lib/allowance";
+import { effectiveAllowance, getAllowance, hasFixedAllowance } from "@/lib/allowance";
 import {
   loadHistory,
   MAX_HISTORY_ENTRIES,
@@ -50,6 +50,7 @@ export default function Page() {
     department: "",
     position: "一般職員",
     carUnitPrice: 0,
+    customAllowance: 0,
   });
   const [trips, setTrips] = useState<Trip[]>([]);
   // 出力対象として選択されている出張の ID（一覧のチェックボックス）
@@ -129,7 +130,7 @@ export default function Page() {
       {tab === "settings" && <Settings profile={profile} onChange={updateProfile} />}
       {tab === "input" && (
         <InputScreen
-          position={profile.position}
+          defaultAllowance={effectiveAllowance(profile)}
           defaultCarUnitPrice={profile.carUnitPrice}
           history={history}
           onDeleteHistory={(entry) => setHistory(removeHistory(entry))}
@@ -215,8 +216,24 @@ function Settings({
           </select>
         </div>
         <div className="field">
-          <label>日当額（役職より自動）</label>
-          <input value={`${getAllowance(profile.position)} 円`} disabled />
+          {hasFixedAllowance(profile.position) ? (
+            <>
+              <label>日当額（役職より自動）</label>
+              <input value={`${getAllowance(profile.position)} 円`} disabled />
+            </>
+          ) : (
+            <>
+              <label>日当額（手入力）</label>
+              <input
+                type="number"
+                value={profile.customAllowance || ""}
+                placeholder="金額を入力（円）"
+                onChange={(e) =>
+                  onChange({ ...profile, customAllowance: Math.round(Number(e.target.value)) || 0 })
+                }
+              />
+            </>
+          )}
         </div>
       </div>
       <div className="field">
@@ -240,13 +257,13 @@ function Settings({
 }
 
 function InputScreen({
-  position,
+  defaultAllowance,
   defaultCarUnitPrice,
   history,
   onAdd,
   onDeleteHistory,
 }: {
-  position: Position;
+  defaultAllowance: number;
   defaultCarUnitPrice: number;
   history: TripHistoryEntry[];
   onAdd: (trips: Trip[], goToList: boolean) => void;
@@ -278,7 +295,7 @@ function InputScreen({
     // 日当額は役職から、自家用車の単価は設定から初期値として補完する
     setDrafts((prev) => [
       ...prev,
-      { ...emptyTrip(), allowance: getAllowance(position), carUnitPrice: defaultCarUnitPrice },
+      { ...emptyTrip(), allowance: defaultAllowance, carUnitPrice: defaultCarUnitPrice },
     ]);
   }
   function patchDraft(id: string, patch: Partial<Trip>) {
