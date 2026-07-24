@@ -7,7 +7,7 @@ import type { RouteLeg, Trip } from "@/lib/types";
 import DecimalInput from "./DecimalInput";
 
 /** 用務の選択肢（「その他」を選ぶと自由入力になる） */
-const PURPOSE_PRESETS = ["顧客打ち合わせ", "ロケ"] as const;
+const PURPOSE_PRESETS = ["顧客打ち合わせ", "取材", "ロケ"] as const;
 
 /** 利用会社（コインパーキング等）の選択肢（「その他」を選ぶと自由入力になる） */
 const PARKING_COMPANY_PRESETS = [
@@ -181,6 +181,7 @@ export default function TripFormFields({ trip, onChange, historyValues, dateOnly
           >
             <option value="">選択してください</option>
             <option value="顧客打ち合わせ">顧客打ち合わせ</option>
+            <option value="取材">取材</option>
             <option value="ロケ">ロケ</option>
             <option value="その他">その他</option>
           </select>
