@@ -1,3 +1,4 @@
+import { tripTotal } from "./tripForm";
 import type { GenerateRequest } from "./types";
 
 const STORAGE_KEY = "travel-expense-output-history-v1";
@@ -30,22 +31,9 @@ export interface MonthCumulative {
   count: number;
 }
 
-/**
- * 出力履歴を年ごとに集計して累計を返す（新しい年が上）。
- * 年は 対象年 を優先し、無ければ出力した日の年で補う。
- */
-export function cumulativeByYear(entries: OutputHistoryEntry[]): YearCumulative[] {
-  const map = new Map<number, { amount: number; count: number }>();
-  for (const e of entries) {
-    const year = e.year ?? e.request?.year ?? new Date(e.at).getFullYear();
-    const cur = map.get(year) ?? { amount: 0, count: 0 };
-    cur.amount += e.amount;
-    cur.count += e.count;
-    map.set(year, cur);
-  }
-  return [...map.entries()]
-    .map(([year, v]) => ({ year, amount: v.amount, count: v.count }))
-    .sort((a, b) => b.year - a.year);
+/** 1件の出力の年（対象年優先、無ければ出力日の年） */
+function entryYear(e: OutputHistoryEntry): number {
+  return e.year ?? e.request?.year ?? new Date(e.at).getFullYear();
 }
 
 /** 1件の出力の月別内訳を返す（無ければ期間の先頭月に全額を割り当てる） */
@@ -58,22 +46,81 @@ function entryMonths(e: OutputHistoryEntry): MonthCumulative[] {
   return [];
 }
 
-/** 指定した年の、月ごとの合計を返す（月の昇順） */
-export function monthlyByYear(entries: OutputHistoryEntry[], year: number): MonthCumulative[] {
-  const map = new Map<number, { amount: number; count: number }>();
+interface Bucket {
+  amount: number;
+  count: number;
+}
+
+/**
+ * 累計を「出張1件ごと（ID単位）」で重複を除いて集計する。
+ * - スナップショット（request.trips）がある出力: 出張を ID で名寄せし、同じ ID は
+ *   最新の出力の内容で1回だけ数える（同じ内容を出力し直しても二重にならない）。
+ * - スナップショットが無い古い記録: ID で名寄せできないため、記録どおりの合算で加える。
+ * 戻り値: 年ごと / 年+月ごと の集計。
+ */
+function computeCumulative(entries: OutputHistoryEntry[]): {
+  byYear: Map<number, Bucket>;
+  byYearMonth: Map<string, Bucket>;
+} {
+  const byYear = new Map<number, Bucket>();
+  const byYearMonth = new Map<string, Bucket>();
+  const add = (map: Map<string | number, Bucket>, key: string | number, amount: number, count: number) => {
+    const cur = map.get(key) ?? { amount: 0, count: 0 };
+    cur.amount += amount;
+    cur.count += count;
+    map.set(key, cur);
+  };
+
+  // 1) スナップショットがある出力 → 出張を ID で名寄せ（最新の出力を採用）
+  const tripById = new Map<string, { year: number; month: number; amount: number; at: number }>();
   for (const e of entries) {
-    const y = e.year ?? e.request?.year ?? new Date(e.at).getFullYear();
-    if (y !== year) continue;
-    for (const m of entryMonths(e)) {
-      const cur = map.get(m.month) ?? { amount: 0, count: 0 };
-      cur.amount += m.amount;
-      cur.count += m.count;
-      map.set(m.month, cur);
+    const trips = e.request?.trips;
+    if (!trips) continue;
+    const year = entryYear(e);
+    for (const t of trips) {
+      const prev = tripById.get(t.id);
+      if (!prev || e.at >= prev.at) {
+        tripById.set(t.id, { year, month: t.month, amount: tripTotal(t), at: e.at });
+      }
     }
   }
-  return [...map.entries()]
-    .map(([month, v]) => ({ month, amount: v.amount, count: v.count }))
-    .sort((a, b) => a.month - b.month);
+  for (const v of tripById.values()) {
+    add(byYear as Map<string | number, Bucket>, v.year, v.amount, 1);
+    add(byYearMonth as Map<string | number, Bucket>, `${v.year}-${v.month}`, v.amount, 1);
+  }
+
+  // 2) スナップショットが無い古い記録 → 記録どおりの合算（名寄せ不可）
+  for (const e of entries) {
+    if (e.request?.trips) continue;
+    const year = entryYear(e);
+    add(byYear as Map<string | number, Bucket>, year, e.amount, e.count);
+    for (const m of entryMonths(e)) {
+      add(byYearMonth as Map<string | number, Bucket>, `${year}-${m.month}`, m.amount, m.count);
+    }
+  }
+
+  return { byYear, byYearMonth };
+}
+
+/** 年ごとの累計（新しい年が上）。同じ出張は ID 単位で1回だけ数える */
+export function cumulativeByYear(entries: OutputHistoryEntry[]): YearCumulative[] {
+  const { byYear } = computeCumulative(entries);
+  return [...byYear.entries()]
+    .map(([year, v]) => ({ year, amount: v.amount, count: v.count }))
+    .sort((a, b) => b.year - a.year);
+}
+
+/** 指定した年の、月ごとの合計を返す（月の昇順）。同じ出張は ID 単位で1回だけ数える */
+export function monthlyByYear(entries: OutputHistoryEntry[], year: number): MonthCumulative[] {
+  const { byYearMonth } = computeCumulative(entries);
+  const out: MonthCumulative[] = [];
+  for (const [key, v] of byYearMonth.entries()) {
+    const dash = key.indexOf("-");
+    const y = Number(key.slice(0, dash));
+    const m = Number(key.slice(dash + 1));
+    if (y === year) out.push({ month: m, amount: v.amount, count: v.count });
+  }
+  return out.sort((a, b) => a.month - b.month);
 }
 
 function isBrowser(): boolean {
