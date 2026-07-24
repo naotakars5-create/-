@@ -3,7 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import TripFormFields from "@/components/TripFormFields";
 import { getAllowance } from "@/lib/allowance";
-import { loadHistory, recordHistory, tripFromHistory, uniqueValues, type TripHistoryEntry } from "@/lib/history";
+import {
+  loadHistory,
+  recordHistory,
+  removeHistory,
+  tripFromHistory,
+  uniqueValues,
+  type TripHistoryEntry,
+} from "@/lib/history";
 import { loadProfile, saveProfile } from "@/lib/profile";
 import { emptyTrip, totalAmount, tripTotal } from "@/lib/tripForm";
 import { POSITIONS, type Position, type Trip, type UserProfile } from "@/lib/types";
@@ -91,6 +98,7 @@ export default function Page() {
         <InputScreen
           position={profile.position}
           history={history}
+          onDeleteHistory={(entry) => setHistory(removeHistory(entry))}
           onAddAll={(newTrips) => {
             setTrips((prev) => [...prev, ...newTrips]);
             // 追加した出張はデフォルトで出力対象に含める
@@ -176,14 +184,18 @@ function InputScreen({
   position,
   history,
   onAddAll,
+  onDeleteHistory,
 }: {
   position: Position;
   history: TripHistoryEntry[];
   onAddAll: (trips: Trip[]) => void;
+  onDeleteHistory: (entry: TripHistoryEntry) => void;
 }) {
   const [drafts, setDrafts] = useState<Trip[]>([]);
   // 履歴から選んで追加した下書きの ID。これらは日付以外をロックする（内容は登録時のまま）。
   const [lockedIds, setLockedIds] = useState<Set<string>>(new Set());
+  // 履歴の「管理（削除）モード」。ON のとき、各履歴に削除ボタンを出す。
+  const [manageHistory, setManageHistory] = useState(false);
 
   const historyValues = useMemo(
     () => ({
@@ -235,19 +247,67 @@ function InputScreen({
     <div>
       {history.length > 0 && (
         <div className="card">
-          <label>過去に追加した出張から選ぶ（選ぶと今日の日付で追加され、日付だけ変更できます）</label>
-          <div className="row">
-            {history.map((h, i) => (
-              <button
-                key={i}
-                className="btn secondary"
-                onClick={() => addFromHistory(h)}
-                title={h.purpose}
-              >
-                {h.destination}
-                {h.visitTo && ` / ${h.visitTo}`}
-              </button>
-            ))}
+          <div className="row" style={{ justifyContent: "space-between" }}>
+            <label style={{ marginBottom: 0 }}>
+              過去に追加した出張から選ぶ
+              {manageHistory
+                ? "（不要なものは「削除」で消せます）"
+                : "（選ぶと今日の日付で追加され、日付だけ変更できます）"}
+            </label>
+            <button
+              className="btn ghost"
+              onClick={() => setManageHistory((v) => !v)}
+              style={{ padding: "6px 12px", minHeight: "auto" }}
+            >
+              {manageHistory ? "完了" : "履歴を編集"}
+            </button>
+          </div>
+          <div className="row" style={{ marginTop: 8 }}>
+            {history.map((h, i) =>
+              manageHistory ? (
+                <span
+                  key={i}
+                  className="row"
+                  style={{
+                    gap: 0,
+                    border: "1px solid var(--border-strong)",
+                    borderRadius: "var(--radius-sm)",
+                    overflow: "hidden",
+                  }}
+                >
+                  <span style={{ padding: "8px 10px", fontSize: "0.9rem" }}>
+                    {h.destination}
+                    {h.visitTo && ` / ${h.visitTo}`}
+                  </span>
+                  <button
+                    className="btn danger"
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          `「${h.destination}${h.visitTo ? " / " + h.visitTo : ""}」を履歴から削除しますか？`
+                        )
+                      ) {
+                        onDeleteHistory(h);
+                      }
+                    }}
+                    style={{ borderRadius: 0, border: "none", borderLeft: "1px solid var(--border-strong)" }}
+                    title="この履歴を削除"
+                  >
+                    削除
+                  </button>
+                </span>
+              ) : (
+                <button
+                  key={i}
+                  className="btn secondary"
+                  onClick={() => addFromHistory(h)}
+                  title={h.purpose}
+                >
+                  {h.destination}
+                  {h.visitTo && ` / ${h.visitTo}`}
+                </button>
+              )
+            )}
           </div>
         </div>
       )}
@@ -341,6 +401,17 @@ function ListScreen({
     onChange(trips.filter((t) => t.id !== id));
     if (editingId === id) setEditingId(null);
   }
+  const clampNum = (v: string, lo: number, hi: number) => {
+    const n = Math.round(Number(v));
+    if (!Number.isFinite(n)) return lo;
+    return Math.min(hi, Math.max(lo, n));
+  };
+  const dateInputStyle = {
+    width: 56,
+    minHeight: 0,
+    padding: "6px 8px",
+    textAlign: "center" as const,
+  };
 
   if (trips.length === 0) {
     return <div className="card muted">まだ出張が登録されていません。「入力」タブから追加してください。</div>;
@@ -377,22 +448,43 @@ function ListScreen({
       {trips.map((t) => (
         <div key={t.id} className="trip-item">
           <div className="head">
-            <label className="toggle" style={{ alignItems: "flex-start", flex: 1 }}>
-              <input
-                type="checkbox"
-                checked={selectedIds.has(t.id)}
-                onChange={() => onToggleSelected(t.id)}
-                style={{ marginTop: 4 }}
-              />
-              <span>
-                <strong>
-                  {t.month}/{t.day} {t.destination || "（未入力）"}
-                </strong>
-                <div className="muted">
-                  {t.visitTo} {t.purpose && `／ ${t.purpose}`} ・ 小計 {tripTotal(t).toLocaleString()} 円
-                </div>
-              </span>
-            </label>
+            <input
+              type="checkbox"
+              checked={selectedIds.has(t.id)}
+              onChange={() => onToggleSelected(t.id)}
+              aria-label="出力対象に含める"
+              style={{ width: 20, height: 20, minHeight: 0, padding: 0, flex: "0 0 auto" }}
+            />
+            <div style={{ flex: 1 }}>
+              {/* その場で日付だけ変更できる（月・日） */}
+              <div className="row" style={{ gap: 6, alignItems: "center" }}>
+                <input
+                  type="number"
+                  min={1}
+                  max={12}
+                  value={t.month}
+                  aria-label="月"
+                  style={dateInputStyle}
+                  onChange={(e) => patch(t.id, { month: clampNum(e.target.value, 1, 12) })}
+                />
+                <span className="muted">月</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={31}
+                  value={t.day}
+                  aria-label="日"
+                  style={dateInputStyle}
+                  onChange={(e) => patch(t.id, { day: clampNum(e.target.value, 1, 31) })}
+                />
+                <span className="muted">日</span>
+                <strong style={{ marginLeft: 6 }}>{t.destination || "（未入力）"}</strong>
+              </div>
+              <div className="muted" style={{ marginTop: 4 }}>
+                {t.visitTo} {t.purpose && `／ ${t.purpose}`} ・ 小計{" "}
+                {tripTotal(t).toLocaleString()} 円
+              </div>
+            </div>
             <div className="row">
               <button
                 className="btn ghost"
