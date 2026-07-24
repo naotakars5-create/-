@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import DecimalInput from "@/components/DecimalInput";
 import TripFormFields from "@/components/TripFormFields";
 import { getAllowance } from "@/lib/allowance";
 import {
@@ -220,13 +221,11 @@ function Settings({
       <div className="grid2">
         <div className="field">
           <label>自家用車の単価（円/km）</label>
-          <input
-            type="number"
-            value={profile.carUnitPrice || ""}
-            placeholder="例: 15"
-            onChange={(e) =>
-              onChange({ ...profile, carUnitPrice: Math.round(Number(e.target.value)) || 0 })
-            }
+          <DecimalInput
+            value={profile.carUnitPrice}
+            placeholder="例: 15.5"
+            ariaLabel="自家用車の単価（円/km）"
+            onChange={(n) => onChange({ ...profile, carUnitPrice: n })}
           />
         </div>
         <div className="field">

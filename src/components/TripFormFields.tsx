@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import { emptyLeg } from "@/lib/fare";
 import { carAmount } from "@/lib/tripForm";
 import type { RouteLeg, Trip } from "@/lib/types";
+import DecimalInput from "./DecimalInput";
 
 /** 用務の選択肢（「その他」を選ぶと自由入力になる） */
 const PURPOSE_PRESETS = ["顧客打ち合わせ", "ロケ"] as const;
@@ -290,22 +291,22 @@ export default function TripFormFields({ trip, onChange, historyValues, dateOnly
         <div className="grid2">
           <div className="field" style={{ marginBottom: 0 }}>
             <label style={{ fontWeight: 400, fontSize: "0.75rem" }}>距離（km）</label>
-            <input
-              type="number"
-              value={trip.carDistanceKm || ""}
+            <DecimalInput
+              value={trip.carDistanceKm}
               disabled={lock}
-              placeholder="例: 25"
-              onChange={(e) => onChange({ carDistanceKm: num(e.target.value) })}
+              placeholder="例: 25.5"
+              ariaLabel="自家用車の距離（km）"
+              onChange={(n) => onChange({ carDistanceKm: n })}
             />
           </div>
           <div className="field" style={{ marginBottom: 0 }}>
             <label style={{ fontWeight: 400, fontSize: "0.75rem" }}>単価（円/km）</label>
-            <input
-              type="number"
-              value={trip.carUnitPrice || ""}
+            <DecimalInput
+              value={trip.carUnitPrice}
               disabled={lock}
               placeholder="設定の単価"
-              onChange={(e) => onChange({ carUnitPrice: num(e.target.value) })}
+              ariaLabel="自家用車の単価（円/km）"
+              onChange={(n) => onChange({ carUnitPrice: n })}
             />
           </div>
         </div>
