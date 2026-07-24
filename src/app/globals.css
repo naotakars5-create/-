@@ -125,8 +125,8 @@ header p {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 20px;
-  margin-bottom: 16px;
+  padding: 15px 16px;
+  margin-bottom: 12px;
   box-shadow: var(--shadow-sm);
 }
 
@@ -138,7 +138,7 @@ label {
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--muted);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   letter-spacing: 0.01em;
 }
 
@@ -219,17 +219,17 @@ textarea {
 .grid2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 10px;
 }
 
 .grid3 {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 14px;
+  gap: 10px;
 }
 
 .field {
-  margin-bottom: 14px;
+  margin-bottom: 9px;
 }
 
 .field:last-child {
