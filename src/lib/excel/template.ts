@@ -4,9 +4,12 @@ import type { Worksheet, Workbook } from "exceljs";
 export const BLOCK_START_ROWS = [6, 11, 16, 21, 26, 31] as const;
 export const MAX_TRIPS_PER_SHEET = BLOCK_START_ROWS.length;
 
-/** シート名: YYYY_M_1（前半）/ YYYY_M_2（後半）。新規作成は _1 / _2 で統一 */
-export function sheetName(year: number, month: number, half: 1 | 2): string {
-  return `${year}_${month}_${half}`;
+/**
+ * シート名: YYYY_M（その月の1枚目）。6件を超えて2枚目以降が必要なら
+ * YYYY_M_2, YYYY_M_3 … と続ける（前半/後半での分割はしない）。
+ */
+export function sheetName(year: number, month: number, part: number): string {
+  return part <= 1 ? `${year}_${month}` : `${year}_${month}_${part}`;
 }
 
 const THIN = { style: "thin" as const };
@@ -42,10 +45,10 @@ export function buildTemplateSheet(wb: Workbook, name: string): Worksheet {
   ws.getCell("F1").value = "所属";
   // 実測どおりの固定文言（全期間で一致。同一組織の業務局ラベル）
   ws.getCell("G1").value = "　　　       業務         局";
-  // I1 = 所属（値）。アプリ側が書き込む。
-  ws.getCell("J1").value = "氏名";
-  ws.mergeCells("K1:O1"); // K1 = 氏名（値）。アプリ側が書き込む。
-  for (const addr of ["E1", "F1", "J1"]) {
+  // I1 = 「氏名」ラベル。J1 = 姓、K1(結合) = 名。値はアプリ側が書き込む。
+  ws.getCell("I1").value = "氏名";
+  ws.mergeCells("K1:O1");
+  for (const addr of ["E1", "F1", "I1"]) {
     ws.getCell(addr).font = { size: 9 };
   }
 

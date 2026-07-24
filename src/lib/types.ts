@@ -12,7 +12,8 @@ export type Position = (typeof POSITIONS)[number];
 
 /** ユーザープロフィール（ブラウザ内 state のみ。サーバには保存しない） */
 export interface UserProfile {
-  name: string;
+  lastName: string; // 姓（苗字）
+  firstName: string; // 名（名前）
   department: string;
   position: Position;
 }

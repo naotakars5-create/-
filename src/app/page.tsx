@@ -27,7 +27,8 @@ export default function Page() {
 
   // すべてブラウザ内 state（サーバに保存しない）
   const [profile, setProfile] = useState<UserProfile>({
-    name: "",
+    lastName: "",
+    firstName: "",
     department: "",
     position: "一般職員",
   });
@@ -142,12 +143,21 @@ function Settings({
       <div className="notice info">
         入力した氏名・所属・役職はこのブラウザに自動保存されます。次回から入れ直す必要はありません。
       </div>
-      <div className="grid2">
+      <div className="grid3">
         <div className="field">
-          <label>氏名</label>
+          <label>姓（苗字）</label>
           <input
-            value={profile.name}
-            onChange={(e) => onChange({ ...profile, name: e.target.value })}
+            value={profile.lastName}
+            placeholder="例: 山田"
+            onChange={(e) => onChange({ ...profile, lastName: e.target.value })}
+          />
+        </div>
+        <div className="field">
+          <label>名（名前）</label>
+          <input
+            value={profile.firstName}
+            placeholder="例: 太郎"
+            onChange={(e) => onChange({ ...profile, firstName: e.target.value })}
           />
         </div>
         <div className="field">
@@ -417,6 +427,8 @@ function ListScreen({
     return <div className="card muted">まだ出張が登録されていません。「入力」タブから追加してください。</div>;
   }
 
+  // 表示は月→日の昇順に自動で並べ替える（7月1日が上、7月31日が下）
+  const sortedTrips = [...trips].sort((a, b) => a.month - b.month || a.day - b.day);
   const selectedTrips = trips.filter((t) => selectedIds.has(t.id));
   const selectedCount = selectedTrips.length;
   const selectedTotal = totalAmount(selectedTrips);
@@ -445,7 +457,7 @@ function ListScreen({
         </div>
       </div>
 
-      {trips.map((t) => (
+      {sortedTrips.map((t) => (
         <div key={t.id} className="trip-item">
           <div className="head">
             <input
@@ -595,7 +607,7 @@ function OutputScreen({
         {byMonth.map(([m, c]) => `${m}月 ${c}件`).join(" / ")}） ／ 合計{" "}
         {selectedTotal.toLocaleString()} 円
         <br />
-        月ごと・前半（1〜15日）/後半（16〜31日）で自動的にシートを分けます。1シート6件を超えると超過分は警告します。
+        月ごとにシートを分けます。1シートは6件まで。7件目以降は同じ月の2枚目・3枚目のシートに自動で続きます。
       </div>
 
       {error && <div className="notice error">{error}</div>}

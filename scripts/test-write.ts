@@ -62,7 +62,7 @@ async function main() {
   ];
 
   const { buffer, warnings } = await generateWorkbook({
-    profile: { name: "山田太郎", department: "営業部", position },
+    profile: { lastName: "山田", firstName: "太郎", department: "営業部", position },
     trips,
     year: 2026,
     claimDate: "2026-07-01",
