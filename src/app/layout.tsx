@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "旅費精算書 入力アプリ",
-  description: "旅費精算書を作成（プロトタイプ）",
+  description: "旅費精算書を作成",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

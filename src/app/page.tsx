@@ -109,7 +109,7 @@ export default function Page() {
     <div className="container">
       <header>
         <h1>旅費精算書 入力アプリ</h1>
-        <p>プロトタイプ / 設定・履歴はこのブラウザに保存されます</p>
+        <p>設定・履歴はこのブラウザに保存されます</p>
       </header>
 
       <nav className="tabs">
