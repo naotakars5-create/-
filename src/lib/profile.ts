@@ -18,6 +18,18 @@ function isPosition(v: unknown): v is Position {
   return typeof v === "string" && (POSITIONS as readonly string[]).includes(v);
 }
 
+/** 旧・個別の役職名を、まとめた項目へ読み替える */
+const POSITION_MIGRATION: Record<string, Position> = {
+  局長: "局長・局次長・担当局長",
+  局次長: "局長・局次長・担当局長",
+  担当局長: "局長・局次長・担当局長",
+};
+
+function normalizePosition(v: unknown): Position {
+  if (typeof v === "string" && POSITION_MIGRATION[v]) return POSITION_MIGRATION[v];
+  return isPosition(v) ? v : "一般職員";
+}
+
 /** 設定（氏名・所属・役職）を読み込む。未保存ならデフォルトを返す。ブラウザ内のみ */
 export function loadProfile(): UserProfile {
   if (!isBrowser()) return DEFAULT_PROFILE;
@@ -37,7 +49,7 @@ export function loadProfile(): UserProfile {
     return {
       name,
       department: typeof p?.department === "string" ? p.department : "",
-      position: isPosition(p?.position) ? p.position : "一般職員",
+      position: normalizePosition(p?.position),
       carUnitPrice: typeof p?.carUnitPrice === "number" ? p.carUnitPrice : 0,
       customAllowance: typeof p?.customAllowance === "number" ? p.customAllowance : 0,
     };
