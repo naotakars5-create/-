@@ -38,6 +38,8 @@ function sanitizeTrip(e: unknown): Trip | null {
     visitTo: str(o.visitTo),
     purpose: str(o.purpose),
     routes,
+    carDistanceKm: numOr(o.carDistanceKm, 0),
+    carUnitPrice: numOr(o.carUnitPrice, 0),
     tollParking: numOr(o.tollParking, 0),
     tollParkingCompany: str(o.tollParkingCompany),
     taxi: numOr(o.taxi, 0),

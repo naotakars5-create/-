@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react";
 import { emptyLeg } from "@/lib/fare";
+import { carAmount } from "@/lib/tripForm";
 import type { RouteLeg, Trip } from "@/lib/types";
 
 /** 用務の選択肢（「その他」を選ぶと自由入力になる） */
@@ -280,6 +281,39 @@ export default function TripFormFields({ trip, onChange, historyValues, dateOnly
           >
             ＋ 経路を追加
           </button>
+        )}
+      </div>
+
+      {/* 自家用車（外回りで自家用車を使った場合。距離×単価で計上） */}
+      <div className="field">
+        <label>自家用車（使った場合のみ・距離×単価）</label>
+        <div className="grid2">
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label style={{ fontWeight: 400, fontSize: "0.75rem" }}>距離（km）</label>
+            <input
+              type="number"
+              value={trip.carDistanceKm || ""}
+              disabled={lock}
+              placeholder="例: 25"
+              onChange={(e) => onChange({ carDistanceKm: num(e.target.value) })}
+            />
+          </div>
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label style={{ fontWeight: 400, fontSize: "0.75rem" }}>単価（円/km）</label>
+            <input
+              type="number"
+              value={trip.carUnitPrice || ""}
+              disabled={lock}
+              placeholder="設定の単価"
+              onChange={(e) => onChange({ carUnitPrice: num(e.target.value) })}
+            />
+          </div>
+        </div>
+        {carAmount(trip) > 0 && (
+          <div className="muted" style={{ fontSize: "0.8rem", marginTop: 4 }}>
+            自家用車費: {trip.carDistanceKm}km × {trip.carUnitPrice}円 ={" "}
+            <strong>{carAmount(trip).toLocaleString()}円</strong>（鉄道・バス運賃と同じ扱いで計上）
+          </div>
         )}
       </div>
 

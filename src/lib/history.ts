@@ -67,6 +67,8 @@ function migrateEntry(e: unknown): TripHistoryEntry | null {
     visitTo: str(o.visitTo),
     purpose: str(o.purpose),
     routes,
+    carDistanceKm: numOr(o.carDistanceKm, 0),
+    carUnitPrice: numOr(o.carUnitPrice, 0),
     tollParking: numOr(o.tollParking, 0),
     // 旧: L列の利用会社は taxiCompany（無ければ transitCompany）に入っていた
     tollParkingCompany: str(o.tollParkingCompany) || str(o.taxiCompany) || str(o.transitCompany),

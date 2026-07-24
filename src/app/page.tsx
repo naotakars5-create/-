@@ -47,6 +47,7 @@ export default function Page() {
     name: "",
     department: "",
     position: "一般職員",
+    carUnitPrice: 0,
   });
   const [trips, setTrips] = useState<Trip[]>([]);
   // 出力対象として選択されている出張の ID（一覧のチェックボックス）
@@ -127,6 +128,7 @@ export default function Page() {
       {tab === "input" && (
         <InputScreen
           position={profile.position}
+          defaultCarUnitPrice={profile.carUnitPrice}
           history={history}
           onDeleteHistory={(entry) => setHistory(removeHistory(entry))}
           onAdd={(newTrips, goToList) => {
@@ -215,17 +217,38 @@ function Settings({
           <input value={`${getAllowance(profile.position)} 円`} disabled />
         </div>
       </div>
+      <div className="grid2">
+        <div className="field">
+          <label>自家用車の単価（円/km）</label>
+          <input
+            type="number"
+            value={profile.carUnitPrice || ""}
+            placeholder="例: 15"
+            onChange={(e) =>
+              onChange({ ...profile, carUnitPrice: Math.round(Number(e.target.value)) || 0 })
+            }
+          />
+        </div>
+        <div className="field">
+          <label> </label>
+          <div className="muted" style={{ fontSize: "0.8rem", paddingTop: 6 }}>
+            ガソリン代で毎月変わる場合は、月初にここを更新してください。以降に追加する出張はこの単価で計算されます。
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
 function InputScreen({
   position,
+  defaultCarUnitPrice,
   history,
   onAdd,
   onDeleteHistory,
 }: {
   position: Position;
+  defaultCarUnitPrice: number;
   history: TripHistoryEntry[];
   onAdd: (trips: Trip[], goToList: boolean) => void;
   onDeleteHistory: (entry: TripHistoryEntry) => void;
@@ -253,8 +276,11 @@ function InputScreen({
     setLockedIds((prev) => new Set(prev).add(id)); // 選んで追加したものは日付だけ変更可
   }
   function addEmpty() {
-    // 日当額は現在の役職設定から初期値として補完する（0円のまま出さない）
-    setDrafts((prev) => [...prev, { ...emptyTrip(), allowance: getAllowance(position) }]);
+    // 日当額は役職から、自家用車の単価は設定から初期値として補完する
+    setDrafts((prev) => [
+      ...prev,
+      { ...emptyTrip(), allowance: getAllowance(position), carUnitPrice: defaultCarUnitPrice },
+    ]);
   }
   function patchDraft(id: string, patch: Partial<Trip>) {
     setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, ...patch } : d)));

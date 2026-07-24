@@ -16,6 +16,8 @@ function makeTrip(partial: Partial<Trip> & Pick<Trip, "id" | "month" | "day">): 
     visitTo: "",
     purpose: "",
     routes: [],
+    carDistanceKm: 0,
+    carUnitPrice: 0,
     tollParking: 0,
     tollParkingCompany: "",
     taxi: 0,
@@ -59,10 +61,21 @@ async function main() {
       tollParkingCompany: "タイムズ幕張",
       taxi: 1200,
     }),
+    makeTrip({
+      id: "3",
+      month: 6,
+      day: 25,
+      destination: "市原",
+      visitTo: "市原工場",
+      purpose: "顧客打ち合わせ",
+      // 自家用車の例（距離30km × 単価15円 = 450円）
+      carDistanceKm: 30,
+      carUnitPrice: 15,
+    }),
   ];
 
   const { buffer, warnings } = await generateWorkbook({
-    profile: { name: "山田　太郎", department: "営業部", position },
+    profile: { name: "山田　太郎", department: "営業部", position, carUnitPrice: 15 },
     trips,
     year: 2026,
     claimDate: "2026-07-01",

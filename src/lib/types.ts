@@ -15,6 +15,7 @@ export interface UserProfile {
   name: string; // 氏名（姓名をまとめて1つ）
   department: string;
   position: Position;
+  carUnitPrice: number; // 自家用車の単価（円/km）。ガソリン代で毎月変わるので都度更新する
 }
 
 /** 鉄道・バス経路の1区間（出発駅・到着駅・往復・運賃） */
@@ -34,6 +35,8 @@ export interface Trip {
   visitTo: string; // 訪問先名 E7
   purpose: string; // 用務 E8
   routes: RouteLeg[]; // 鉄道・バス経路（複数区間可）。各区間が G/H 列の1行に対応
+  carDistanceKm: number; // 自家用車の移動距離（km）。金額 = 距離 × 単価
+  carUnitPrice: number; // 自家用車の単価（円/km）。入力時点の設定値を保持
   tollParking: number; // 有料道路・駐車場代 J6（主にコインパーキング）
   tollParkingCompany: string; // 利用会社 L6（コインパーキング等の利用会社）
   taxi: number; // タクシー代 K6

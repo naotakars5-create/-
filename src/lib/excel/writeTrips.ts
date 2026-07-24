@@ -2,7 +2,7 @@ import ExcelJS from "exceljs";
 import type { Workbook, Worksheet } from "exceljs";
 import type { GenerateRequest, Trip } from "../types";
 import { buildRoute } from "../fare";
-import { legFare } from "../tripForm";
+import { carAmount, legFare } from "../tripForm";
 import {
   BLOCK_START_ROWS,
   MAX_TRIPS_PER_SHEET,
@@ -80,7 +80,8 @@ function tripColumnAmounts(trip: Trip): {
   allowance: number;
   total: number;
 } {
-  const fare = trip.routes.reduce((s, l) => s + legFare(l), 0);
+  // 自家用車費も鉄道・バス運賃と同じ H 列に入れるので fare に含める
+  const fare = trip.routes.reduce((s, l) => s + legFare(l), 0) + carAmount(trip);
   const toll = trip.tollParking || 0;
   const taxi = trip.taxi || 0;
   const allowance = trip.payAllowance ? trip.allowance || 0 : 0;
@@ -101,24 +102,39 @@ function writeTripBlock(ws: Worksheet, startRow: number, trip: Trip): number {
   ws.getCell(`E${r + 1}`).value = trip.visitTo;
   ws.getCell(`E${r + 2}`).value = trip.purpose;
 
-  // 経路は区間ごとに G/H 列の各行へ（最大4区間。H10=SUM(H6:H9) が合算する）
-  const filled = trip.routes.filter((l) => l.from || l.to || l.fare != null);
-  const legs = filled.slice(0, MAX_LEGS_PER_TRIP);
-  legs.forEach((leg, i) => {
+  // 経路（鉄道・バス）＋自家用車を、G/H 列の各行へ書く（最大4行。H10=SUM(H6:H9) が合算する）
+  const lines: { text: string; amount: number | null }[] = [];
+  for (const leg of trip.routes) {
+    if (leg.from || leg.to || leg.fare != null) {
+      // 入力は片道運賃。往復チェック時は2倍で計上する
+      lines.push({
+        text: buildRoute(leg.from, leg.to, leg.roundTrip),
+        amount: leg.fare != null ? legFare(leg) : null,
+      });
+    }
+  }
+  const car = carAmount(trip);
+  if (trip.carDistanceKm > 0 || car > 0) {
+    lines.push({
+      text: `自家用車 ${trip.carDistanceKm}km×${trip.carUnitPrice || 0}円`,
+      amount: car > 0 ? car : null,
+    });
+  }
+
+  const shown = lines.slice(0, MAX_LEGS_PER_TRIP);
+  shown.forEach((ln, i) => {
     const row = r + i;
-    const routeText = buildRoute(leg.from, leg.to, leg.roundTrip);
     const cell = ws.getCell(`G${row}`);
-    cell.value = routeText;
-    // 入力は片道運賃。往復チェック時は2倍で計上する
-    if (leg.fare != null) ws.getCell(`H${row}`).value = legFare(leg);
+    cell.value = ln.text;
+    if (ln.amount != null) ws.getCell(`H${row}`).value = ln.amount;
 
     // 通常フォントで収まらない長い経路は、文字を小さく（9pt）して1行に収めやすくする
-    const w = displayWidth(routeText);
+    const w = displayWidth(ln.text);
     if (w > ROUTE_NORMAL_CAPACITY) {
       cell.font = { size: ROUTE_SMALL_FONT_SIZE };
-      const lines = Math.max(1, Math.ceil(w / ROUTE_SMALL_CAPACITY));
+      const nlines = Math.max(1, Math.ceil(w / ROUTE_SMALL_CAPACITY));
       // 小さくしても収まらないぶんだけ、行の高さを控えめに広げる
-      if (lines > 1) ws.getRow(row).height = lines * ROUTE_SMALL_LINE_HEIGHT;
+      if (nlines > 1) ws.getRow(row).height = nlines * ROUTE_SMALL_LINE_HEIGHT;
     }
   });
 
@@ -135,7 +151,7 @@ function writeTripBlock(ws: Worksheet, startRow: number, trip: Trip): number {
   setFormulaResult(ws, `M${sub}`, amt.allowance);
   setFormulaResult(ws, `O${r}`, amt.total);
 
-  return Math.max(0, filled.length - MAX_LEGS_PER_TRIP);
+  return Math.max(0, lines.length - MAX_LEGS_PER_TRIP);
 }
 
 /** シート下部の総計（36〜39行）に計算結果を埋め込む */

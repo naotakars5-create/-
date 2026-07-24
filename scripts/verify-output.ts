@@ -93,11 +93,19 @@ async function main() {
     `L11(利用会社 コインP) 不一致: ${ws.getCell("L11").value}`
   );
 
-  // シート総計の結果（運賃1800 / 車賃2000 / 日当1350 / 計5150）
-  check(result("M36") === 1800, `M36(運賃計) 不一致: ${result("M36")}`);
+  // 3件目（開始行16, 6月25日）: 自家用車。G列に内訳、H列に金額（距離×単価）
+  check(
+    ws.getCell("G16").value === "自家用車 30km×15円",
+    `G16(自家用車 内訳) 不一致: ${ws.getCell("G16").value}`
+  );
+  check(ws.getCell("H16").value === 450, `H16(自家用車費 30×15) 不一致: ${ws.getCell("H16").value}`);
+  check(result("O16") === 450, `O16(自家用車ブロック計) 不一致: ${result("O16")}`);
+
+  // シート総計の結果（運賃 980+820+450=2250 / 車賃2000 / 日当1350 / 計5600）
+  check(result("M36") === 2250, `M36(運賃計) 不一致: ${result("M36")}`);
   check(result("M37") === 2000, `M37(車賃計) 不一致: ${result("M37")}`);
   check(result("M38") === 1350, `M38(日当計) 不一致: ${result("M38")}`);
-  check(result("M39") === 5150, `M39(総計) 不一致: ${result("M39")}`);
+  check(result("M39") === 5600, `M39(総計) 不一致: ${result("M39")}`);
 
   // 固定ラベルに触れていないか
   check(ws.getCell("B6").value === "/", `B6 固定ラベル破損: ${ws.getCell("B6").value}`);
