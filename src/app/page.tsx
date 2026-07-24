@@ -128,7 +128,7 @@ export default function Page() {
           position={profile.position}
           history={history}
           onDeleteHistory={(entry) => setHistory(removeHistory(entry))}
-          onAddAll={(newTrips) => {
+          onAdd={(newTrips, goToList) => {
             setTrips((prev) => [...prev, ...newTrips]);
             // 追加した出張はデフォルトで出力対象に含める
             setSelectedIds((prev) => {
@@ -138,7 +138,7 @@ export default function Page() {
             });
             recordHistory(newTrips);
             setHistory(loadHistory());
-            setTab("list");
+            if (goToList) setTab("list");
           }}
         />
       )}
@@ -221,12 +221,12 @@ function Settings({
 function InputScreen({
   position,
   history,
-  onAddAll,
+  onAdd,
   onDeleteHistory,
 }: {
   position: Position;
   history: TripHistoryEntry[];
-  onAddAll: (trips: Trip[]) => void;
+  onAdd: (trips: Trip[], goToList: boolean) => void;
   onDeleteHistory: (entry: TripHistoryEntry) => void;
 }) {
   const [drafts, setDrafts] = useState<Trip[]>([]);
@@ -401,7 +401,21 @@ function InputScreen({
                   historyValues={historyValues}
                   dateOnly={locked}
                 />
-                <div className="total">小計: {tripTotal(d).toLocaleString()} 円</div>
+                <div
+                  className="row"
+                  style={{ justifyContent: "space-between", alignItems: "center", marginTop: 10, flexWrap: "wrap" }}
+                >
+                  <div className="total">小計: {tripTotal(d).toLocaleString()} 円</div>
+                  <button
+                    className="btn"
+                    onClick={() => {
+                      onAdd([d], false);
+                      removeDraft(d.id);
+                    }}
+                  >
+                    この候補をリストに追加
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -416,7 +430,7 @@ function InputScreen({
               <button
                 className="btn"
                 onClick={() => {
-                  onAddAll(drafts);
+                  onAdd(drafts, true);
                   clearDrafts();
                 }}
               >
