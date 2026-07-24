@@ -45,9 +45,9 @@ export function buildTemplateSheet(wb: Workbook, name: string): Worksheet {
   ws.getCell("F1").value = "所属";
   // 実測どおりの固定文言（全期間で一致。同一組織の業務局ラベル）
   ws.getCell("G1").value = "　　　       業務         局";
-  // I1 = 「氏名」ラベル。J1 = 姓、K1(結合) = 名。値はアプリ側が書き込む。
+  // I1 = 「氏名」ラベル。J1:O1(結合) = 氏名（姓名まとめて）。値はアプリ側が書き込む。
   ws.getCell("I1").value = "氏名";
-  ws.mergeCells("K1:O1");
+  ws.mergeCells("J1:O1");
   for (const addr of ["E1", "F1", "I1"]) {
     ws.getCell(addr).font = { size: 9 };
   }
@@ -149,10 +149,15 @@ export function buildTemplateSheet(wb: Workbook, name: string): Worksheet {
   ws.mergeCells("A36:C36"); // 実測どおりの空欄枠（署名・捺印スペース）
   ws.mergeCells("A39:C39");
   ws.getCell("E36").value = "　　このとおり請求します。";
+  // ラベル（運賃等/車賃/日当宿泊/計）は I:L に結合し、金額欄 M:O と隙間なく隣り合わせる
+  ws.mergeCells("I36:L36");
+  ws.mergeCells("I37:L37");
+  ws.mergeCells("I38:L38");
+  ws.mergeCells("I39:L39");
   ws.getCell("I36").value = "運　賃　等";
   ws.getCell("I37").value = "車　　　　賃";
   ws.getCell("I38").value = "日当・宿泊";
-  ws.getCell("I39").value = "    　計";
+  ws.getCell("I39").value = "計";
 
   const blockSubRows = BLOCK_START_ROWS.map((r) => r + 4); // 10,15,20,25,30,35
   ws.mergeCells("M36:O36");
@@ -173,10 +178,14 @@ export function buildTemplateSheet(wb: Workbook, name: string): Worksheet {
     ws.getCell(addr).border = BORDER_ALL;
     ws.getCell(addr).alignment = { horizontal: "right", vertical: "middle" };
   }
-  for (const addr of ["I36", "I37", "I38", "I39"]) {
-    ws.getCell(addr).border = BORDER_ALL;
-    ws.getCell(addr).font = { size: 9 };
-    ws.getCell(addr).alignment = { horizontal: "center", vertical: "middle" };
+  for (const row of [36, 37, 38, 39]) {
+    // 結合したラベル箱 I:L の全セルに罫線を引き、外枠が閉じるようにする
+    for (let col = 9; col <= 12; col++) {
+      ws.getRow(row).getCell(col).border = BORDER_ALL;
+    }
+    const anchor = ws.getCell(`I${row}`);
+    anchor.font = { size: 9 };
+    anchor.alignment = { horizontal: "center", vertical: "middle" };
   }
 
   // 固定文言（実測: 全25シートで完全に一致していた請求先の定型文）

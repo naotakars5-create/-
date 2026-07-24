@@ -29,8 +29,7 @@ export default function Page() {
 
   // すべてブラウザ内 state（サーバに保存しない）
   const [profile, setProfile] = useState<UserProfile>({
-    lastName: "",
-    firstName: "",
+    name: "",
     department: "",
     position: "一般職員",
   });
@@ -157,21 +156,13 @@ function Settings({
       <div className="notice info">
         入力した氏名・所属・役職はこのブラウザに自動保存されます。次回から入れ直す必要はありません。
       </div>
-      <div className="grid3">
+      <div className="grid2">
         <div className="field">
-          <label>姓（苗字）</label>
+          <label>氏名</label>
           <input
-            value={profile.lastName}
-            placeholder="例: 山田"
-            onChange={(e) => onChange({ ...profile, lastName: e.target.value })}
-          />
-        </div>
-        <div className="field">
-          <label>名（名前）</label>
-          <input
-            value={profile.firstName}
-            placeholder="例: 太郎"
-            onChange={(e) => onChange({ ...profile, firstName: e.target.value })}
+            value={profile.name}
+            placeholder="例: 山田 太郎"
+            onChange={(e) => onChange({ ...profile, name: e.target.value })}
           />
         </div>
         <div className="field">

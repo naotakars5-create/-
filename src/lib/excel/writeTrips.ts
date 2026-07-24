@@ -128,15 +128,13 @@ function writeSheetTotals(ws: Worksheet, trips: Trip[]): void {
 
 /** ヘッダー部・請求部を書き込む */
 function writeHeader(ws: Worksheet, req: GenerateRequest): void {
-  // I1 =「氏名」ラベル（テンプレ側で設定済）。J1 = 姓、K1 = 名。
-  ws.getCell("J1").value = req.profile.lastName;
-  ws.getCell("K1").value = req.profile.firstName;
+  // I1 =「氏名」ラベル（テンプレ側で設定済）。J1:O1（結合）= 氏名（姓名まとめて）。
+  ws.getCell("J1").value = req.profile.name;
 
   const d = new Date(req.claimDate);
   const reiwa = d.getFullYear() - 2018; // 令和元年 = 2019
   ws.getCell("F37").value = `　　　令和　${reiwa}年 ${d.getMonth() + 1}月${d.getDate()}日`;
-  const fullName = `${req.profile.lastName}　${req.profile.firstName}`.trim();
-  ws.getCell("G38").value = `${fullName}　㊞`;
+  ws.getCell("G38").value = `${req.profile.name}　㊞`;
 }
 
 export interface GenerateResult {

@@ -3,8 +3,7 @@ import { POSITIONS, type Position, type UserProfile } from "./types";
 const STORAGE_KEY = "travel-expense-profile-v1";
 
 const DEFAULT_PROFILE: UserProfile = {
-  lastName: "",
-  firstName: "",
+  name: "",
   department: "",
   position: "一般職員",
 };
@@ -17,16 +16,7 @@ function isPosition(v: unknown): v is Position {
   return typeof v === "string" && (POSITIONS as readonly string[]).includes(v);
 }
 
-/** 旧形式の氏名（1つの name 文字列）を姓・名に分割する。空白区切りが無ければ全体を姓に入れる */
-function splitLegacyName(name: string): { lastName: string; firstName: string } {
-  const parts = name.trim().split(/[\s　]+/).filter(Boolean);
-  if (parts.length >= 2) {
-    return { lastName: parts[0], firstName: parts.slice(1).join("　") };
-  }
-  return { lastName: name.trim(), firstName: "" };
-}
-
-/** 設定（姓・名・所属・役職）を読み込む。未保存ならデフォルトを返す。ブラウザ内のみ */
+/** 設定（氏名・所属・役職）を読み込む。未保存ならデフォルトを返す。ブラウザ内のみ */
 export function loadProfile(): UserProfile {
   if (!isBrowser()) return DEFAULT_PROFILE;
   try {
@@ -34,18 +24,16 @@ export function loadProfile(): UserProfile {
     if (!raw) return DEFAULT_PROFILE;
     const p = JSON.parse(raw);
 
-    // 旧形式（name 1つ）は姓・名に分割して移行する
-    let lastName = typeof p?.lastName === "string" ? p.lastName : "";
-    let firstName = typeof p?.firstName === "string" ? p.firstName : "";
-    if (!lastName && !firstName && typeof p?.name === "string" && p.name.trim() !== "") {
-      const split = splitLegacyName(p.name);
-      lastName = split.lastName;
-      firstName = split.firstName;
+    // 氏名: 現行の name。無ければ旧形式（姓・名の2欄）を結合して移行する
+    let name = typeof p?.name === "string" ? p.name : "";
+    if (name === "") {
+      const last = typeof p?.lastName === "string" ? p.lastName : "";
+      const first = typeof p?.firstName === "string" ? p.firstName : "";
+      name = `${last}　${first}`.trim();
     }
 
     return {
-      lastName,
-      firstName,
+      name,
       department: typeof p?.department === "string" ? p.department : "",
       position: isPosition(p?.position) ? p.position : "一般職員",
     };

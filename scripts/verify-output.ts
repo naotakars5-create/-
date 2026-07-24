@@ -35,15 +35,16 @@ async function main() {
   check(formula("H25") === "SUM(H21:H24)", `H25 数式欠落/不一致: ${formula("H25")}`);
   check(formula("M39") === "SUM(M36:O38)", `M39 数式不一致: ${formula("M39")}`);
 
-  // ヘッダー: I1=「氏名」ラベル、J1=姓、K1=名
+  // ヘッダー: I1=「氏名」ラベル、J1(結合)=氏名（姓名まとめて）
   check(ws.getCell("I1").value === "氏名", `I1(氏名ラベル) 不一致: ${ws.getCell("I1").value}`);
-  check(ws.getCell("J1").value === "山田", `J1(姓) 不一致: ${ws.getCell("J1").value}`);
-  check(ws.getCell("K1").value === "太郎", `K1(名) 不一致: ${ws.getCell("K1").value}`);
-  // 請求者は姓＋名
+  check(ws.getCell("J1").value === "山田　太郎", `J1(氏名) 不一致: ${ws.getCell("J1").value}`);
   check(
     ws.getCell("G38").value === "山田　太郎　㊞",
     `G38(請求者) 不一致: ${ws.getCell("G38").value}`
   );
+  // 請求欄ラベルが金額欄と隣り合うよう I:L に結合されているか
+  check(ws.getCell("I36").value === "運　賃　等", `I36(運賃ラベル) 不一致: ${ws.getCell("I36").value}`);
+  check(ws.getCell("I38").value === "日当・宿泊", `I38(日当ラベル) 不一致: ${ws.getCell("I38").value}`);
 
   // 1件目（開始行6, 6月12日）
   check(ws.getCell("A6").value === 6, `A6(月) 不一致: ${ws.getCell("A6").value}`);
