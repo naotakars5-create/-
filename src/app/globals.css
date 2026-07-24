@@ -568,6 +568,38 @@ button.btn.danger.route-remove {
 }
 
 /* -------------------------------------------------------------------------
+   13.55 入力履歴のチップ（場所/社名＋小さく経路・金額）
+   ------------------------------------------------------------------------- */
+button.btn.secondary.history-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  text-align: left;
+  max-width: 220px;
+  padding: 6px 12px;
+  line-height: 1.25;
+}
+
+.history-chip-main {
+  font-size: 0.9rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-chip-sub {
+  font-size: 0.68rem;
+  font-weight: 400;
+  opacity: 0.75;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* -------------------------------------------------------------------------
    13.6 出力の履歴（期間・件数・金額の一覧）
    ------------------------------------------------------------------------- */
 .output-history {

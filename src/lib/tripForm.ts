@@ -31,13 +31,19 @@ export function legFare(leg: { fare: number | null; roundTrip: boolean }): numbe
   return (leg.fare ?? 0) * (leg.roundTrip ? 2 : 1);
 }
 
+/** 合計金額の計算に必要な項目だけを持てばよい（Trip でも履歴エントリでも渡せる） */
+type TripAmountFields = Pick<
+  Trip,
+  "routes" | "tollParking" | "taxi" | "payAllowance" | "allowance"
+>;
+
 /** 経路（全区間）の運賃合計（往復は2倍で計上） */
-export function routesFareTotal(t: Trip): number {
+export function routesFareTotal(t: Pick<Trip, "routes">): number {
   return t.routes.reduce((s, leg) => s + legFare(leg), 0);
 }
 
 /** 1件の合計金額 */
-export function tripTotal(t: Trip): number {
+export function tripTotal(t: TripAmountFields): number {
   return (
     routesFareTotal(t) +
     t.tollParking +

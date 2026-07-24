@@ -22,6 +22,7 @@ import {
   type OutputHistoryEntry,
 } from "@/lib/outputHistory";
 import { loadTripsState, saveTripsState } from "@/lib/tripStore";
+import { buildRoute } from "@/lib/fare";
 import { emptyTrip, totalAmount, tripTotal } from "@/lib/tripForm";
 import { POSITIONS, type Position, type Trip, type UserProfile } from "@/lib/types";
 
@@ -322,15 +323,30 @@ function InputScreen({
                   </button>
                 </span>
               ) : (
-                <button
-                  key={i}
-                  className="btn secondary"
-                  onClick={() => addFromHistory(h)}
-                  title={h.purpose}
-                >
-                  {h.destination}
-                  {h.visitTo && ` / ${h.visitTo}`}
-                </button>
+                (() => {
+                  const routeText = h.routes
+                    .map((l) => buildRoute(l.from, l.to, l.roundTrip))
+                    .filter(Boolean)
+                    .join("、");
+                  const amount = tripTotal(h);
+                  const sub = [routeText, `${amount.toLocaleString()}円`]
+                    .filter(Boolean)
+                    .join(" ・ ");
+                  return (
+                    <button
+                      key={i}
+                      className="btn secondary history-chip"
+                      onClick={() => addFromHistory(h)}
+                      title={`${h.destination}${h.visitTo ? " / " + h.visitTo : ""}\n${routeText}\n${amount.toLocaleString()}円${h.purpose ? "\n" + h.purpose : ""}`}
+                    >
+                      <span className="history-chip-main">
+                        {h.destination}
+                        {h.visitTo && ` / ${h.visitTo}`}
+                      </span>
+                      <span className="history-chip-sub">{sub}</span>
+                    </button>
+                  );
+                })()
               )
             )}
           </div>
