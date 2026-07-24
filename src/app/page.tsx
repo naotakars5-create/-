@@ -742,7 +742,11 @@ function OutputScreen({
                 </span>
                 <span style={{ flex: 1, textAlign: "left" }}>
                   期間 <strong>{h.periodLabel || "―"}</strong> ／ {h.count} 件
-                  {h.request && <span className="output-history-dl">⬇ 再出力</span>}
+                  {h.request ? (
+                    <span className="output-history-dl">⬇ クリックで再出力</span>
+                  ) : (
+                    <span className="output-history-old">再出力不可（旧記録）</span>
+                  )}
                 </span>
                 <strong>{h.amount.toLocaleString()} 円</strong>
               </button>

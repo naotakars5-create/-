@@ -649,6 +649,13 @@ button.output-history-main:disabled {
   white-space: nowrap;
 }
 
+.output-history-old {
+  margin-left: 8px;
+  font-size: 0.72rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
 button.btn.danger.output-history-del {
   flex: 0 0 auto;
   min-height: 0;
