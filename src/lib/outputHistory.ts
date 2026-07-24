@@ -1,3 +1,5 @@
+import type { GenerateRequest } from "./types";
+
 const STORAGE_KEY = "travel-expense-output-history-v1";
 const MAX_ENTRIES = 30;
 
@@ -7,6 +9,9 @@ export interface OutputHistoryEntry {
   periodLabel: string; // 期間（例: 6/12〜6/20）
   amount: number; // 合計金額
   count: number; // 件数
+  // 再出力用のスナップショット（この履歴をクリックすると同じ内容を再生成する）。
+  // 古い記録には無い場合がある。
+  request?: GenerateRequest;
 }
 
 function isBrowser(): boolean {

@@ -24,7 +24,13 @@ import {
 import { loadTripsState, saveTripsState } from "@/lib/tripStore";
 import { buildRoute } from "@/lib/fare";
 import { emptyTrip, totalAmount, tripTotal } from "@/lib/tripForm";
-import { POSITIONS, type Position, type Trip, type UserProfile } from "@/lib/types";
+import {
+  POSITIONS,
+  type GenerateRequest,
+  type Position,
+  type Trip,
+  type UserProfile,
+} from "@/lib/types";
 
 function newId(): string {
   return typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`;
@@ -629,49 +635,72 @@ function OutputScreen({
     return [...m.entries()].sort((a, b) => a[0] - b[0]);
   }, [selectedTrips]);
 
+  // 指定したリクエスト内容で Excel を生成してダウンロードする（新規出力・再出力で共用）
+  async function downloadRequest(request: GenerateRequest) {
+    const res = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error ?? "生成に失敗しました");
+    }
+    const warnHeader = res.headers.get("X-Warnings");
+    if (warnHeader) {
+      try {
+        setWarnings(JSON.parse(decodeURIComponent(warnHeader)));
+      } catch {
+        /* ignore */
+      }
+    }
+    const months = [...new Set(request.trips.map((t) => t.month))];
+    const filename =
+      months.length === 1
+        ? `旅費精算書_${request.year}_${months[0]}.xlsx`
+        : `旅費精算書_${request.year}.xlsx`;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function generate() {
     setError(null);
     setWarnings([]);
     setBusy(true);
     try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profile, trips: selectedTrips, year, claimDate }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? "生成に失敗しました");
-      }
-      const warnHeader = res.headers.get("X-Warnings");
-      if (warnHeader) {
-        try {
-          setWarnings(JSON.parse(decodeURIComponent(warnHeader)));
-        } catch {
-          /* ignore */
-        }
-      }
-      const months = [...new Set(selectedTrips.map((t) => t.month))];
-      const filename =
-        months.length === 1 ? `旅費精算書_${year}_${months[0]}.xlsx` : `旅費精算書_${year}.xlsx`;
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
-
-      // 出力履歴（期間・金額・件数）を残す
+      const request: GenerateRequest = { profile, trips: selectedTrips, year, claimDate };
+      await downloadRequest(request);
+      // 出力履歴（期間・金額・件数＋再出力用スナップショット）を残す
       setOutputHistory(
         recordOutput({
           periodLabel: periodLabelOf(selectedTrips),
           amount: selectedTotal,
           count: selectedTrips.length,
+          request,
         })
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : "生成に失敗しました");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // 履歴をクリックしたら、その時の内容で Excel を再ダウンロードする
+  async function reDownload(entry: OutputHistoryEntry) {
+    if (!entry.request || busy) return;
+    setError(null);
+    setWarnings([]);
+    setBusy(true);
+    try {
+      await downloadRequest(entry.request);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "再出力に失敗しました");
     } finally {
       setBusy(false);
     }
@@ -697,13 +726,26 @@ function OutputScreen({
         <div className="output-history">
           {outputHistory.map((h, i) => (
             <div key={i} className="output-history-row">
-              <span className="muted" style={{ fontSize: "0.8rem", minWidth: 76 }}>
-                {formatOutputAt(h.at)}
-              </span>
-              <span style={{ flex: 1 }}>
-                期間 <strong>{h.periodLabel || "―"}</strong> ／ {h.count} 件
-              </span>
-              <strong>{h.amount.toLocaleString()} 円</strong>
+              <button
+                type="button"
+                className="output-history-main"
+                onClick={() => reDownload(h)}
+                disabled={!h.request || busy}
+                title={
+                  h.request
+                    ? "クリックすると、この内容のExcelをもう一度ダウンロードします"
+                    : "この記録は再出力に対応していません（古い記録）"
+                }
+              >
+                <span className="muted" style={{ fontSize: "0.8rem", minWidth: 76 }}>
+                  {formatOutputAt(h.at)}
+                </span>
+                <span style={{ flex: 1, textAlign: "left" }}>
+                  期間 <strong>{h.periodLabel || "―"}</strong> ／ {h.count} 件
+                  {h.request && <span className="output-history-dl">⬇ 再出力</span>}
+                </span>
+                <strong>{h.amount.toLocaleString()} 円</strong>
+              </button>
               <button
                 className="btn danger output-history-del"
                 title="この履歴を削除"

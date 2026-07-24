@@ -610,6 +610,13 @@ button.btn.secondary.history-chip {
 
 .output-history-row {
   display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+button.output-history-main {
+  flex: 1;
+  display: flex;
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
@@ -617,15 +624,43 @@ button.btn.secondary.history-chip {
   border-radius: var(--radius-sm);
   background: var(--accent-weak);
   font-size: 0.9rem;
+  font-family: inherit;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
   flex-wrap: wrap;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+button.output-history-main:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: #dbe6ff;
+}
+
+button.output-history-main:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.output-history-dl {
+  margin-left: 8px;
+  font-size: 0.72rem;
+  color: var(--accent);
+  white-space: nowrap;
 }
 
 button.btn.danger.output-history-del {
   flex: 0 0 auto;
-  min-height: 30px;
+  min-height: 0;
   padding: 2px 10px;
   font-size: 1.05rem;
   line-height: 1;
+}
+
+@media (prefers-color-scheme: dark) {
+  button.output-history-main:hover:not(:disabled) {
+    background: var(--accent-weak);
+  }
 }
 
 /* -------------------------------------------------------------------------
