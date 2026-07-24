@@ -17,6 +17,14 @@ export interface UserProfile {
   position: Position;
 }
 
+/** 鉄道・バス経路の1区間（出発駅・到着駅・往復・運賃） */
+export interface RouteLeg {
+  from: string; // 出発駅（例: 千葉）
+  to: string; // 到着駅（例: 品川）
+  roundTrip: boolean; // 往復なら true（出力は「千葉-品川(往復)」）
+  fare: number | null; // 運賃（円, null = 未入力）
+}
+
 /** 1件の出張データ（テンプレの1ブロックに対応） */
 export interface Trip {
   id: string;
@@ -25,16 +33,12 @@ export interface Trip {
   destination: string; // 出張先（地名） E6
   visitTo: string; // 訪問先名 E7
   purpose: string; // 用務 E8
-  route: string; // 経路 G6（例: 千葉-鎌ケ谷大仏(往復)）
-  fare: number | null; // 鉄道・バス運賃 H6（null = 未入力）
-  fareAuto: boolean; // true = 運賃マスタ以外（Google Maps等）から自動取得した値。要確認の目印
-  transitCompany: string; // 利用会社 I6
-  tollParking: number; // 有料道路・駐車場代 J6
+  routes: RouteLeg[]; // 鉄道・バス経路（複数区間可）。各区間が G/H 列の1行に対応
+  tollParking: number; // 有料道路・駐車場代 J6（主にコインパーキング）
+  tollParkingCompany: string; // 利用会社 L6（コインパーキング等の利用会社）
   taxi: number; // タクシー代 K6
-  taxiCompany: string; // 利用会社（タクシー） L6
   payAllowance: boolean; // 日当を付けるか（デフォルト off）
   allowance: number; // 日当額 M6（payAllowance が true のとき書き込み）
-  lodging: number; // 宿泊料 N6
 }
 
 /** Excel 生成リクエスト。trips は「出力対象として選択された出張」。 */

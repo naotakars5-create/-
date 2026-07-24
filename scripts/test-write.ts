@@ -7,7 +7,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { generateWorkbook } from "../src/lib/excel/writeTrips";
 import { getAllowance } from "../src/lib/allowance";
-import { buildRoute, getFare } from "../src/lib/fare";
+import { getFare } from "../src/lib/fare";
 import type { Trip } from "../src/lib/types";
 
 function makeTrip(partial: Partial<Trip> & Pick<Trip, "id" | "month" | "day">): Trip {
@@ -15,18 +15,19 @@ function makeTrip(partial: Partial<Trip> & Pick<Trip, "id" | "month" | "day">): 
     destination: "",
     visitTo: "",
     purpose: "",
-    route: "",
-    fare: null,
-    fareAuto: false,
-    transitCompany: "",
+    routes: [],
     tollParking: 0,
+    tollParkingCompany: "",
     taxi: 0,
-    taxiCompany: "",
     payAllowance: false,
     allowance: 0,
-    lodging: 0,
     ...partial,
   };
+}
+
+/** 駅名ペアから経路区間を作る（運賃はマスタから引く） */
+function leg(from: string, to: string, roundTrip: boolean) {
+  return { from, to, roundTrip, fare: getFare(from, to, roundTrip) };
 }
 
 async function main() {
@@ -41,8 +42,7 @@ async function main() {
       destination: "鎌ケ谷",
       visitTo: "鎌ケ谷巧業",
       purpose: "顧客打ち合わせ",
-      route: buildRoute("千葉", "鎌ケ谷大仏", true),
-      fare: getFare("千葉", "鎌ケ谷大仏", true),
+      routes: [leg("千葉", "鎌ケ谷大仏", true)],
       payAllowance: true,
       allowance,
     }),
@@ -53,11 +53,11 @@ async function main() {
       destination: "幕張",
       visitTo: "幕張メッセ",
       purpose: "展示会視察",
-      route: buildRoute("千葉", "幕張豊砂駅", true),
-      fare: getFare("千葉", "幕張豊砂駅", true),
+      // 複数区間（乗り継ぎ）の例
+      routes: [leg("千葉", "幕張豊砂駅", true), leg("幕張豊砂駅", "海浜幕張", false)],
+      tollParking: 800,
+      tollParkingCompany: "タイムズ幕張",
       taxi: 1200,
-      taxiCompany: "京成タクシー",
-      lodging: 8000,
     }),
   ];
 

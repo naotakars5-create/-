@@ -1,4 +1,5 @@
 import fareMaster from "./fareMaster.json";
+import type { RouteLeg } from "./types";
 
 interface FareEntry {
   from: string;
@@ -27,4 +28,9 @@ export function getFare(from: string, to: string, roundTrip: boolean): number | 
 export function buildRoute(from: string, to: string, roundTrip: boolean): string {
   if (!from && !to) return "";
   return `${from}-${to}${roundTrip ? "(往復)" : ""}`;
+}
+
+/** 空の経路区間を作る */
+export function emptyLeg(): RouteLeg {
+  return { from: "", to: "", roundTrip: false, fare: null };
 }

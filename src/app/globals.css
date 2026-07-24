@@ -472,6 +472,62 @@ input[type="radio"] {
 }
 
 /* -------------------------------------------------------------------------
+   13.5 経路（出発駅 − 到着駅 ＋ 運賃 の区間。＋で複数追加）
+   ------------------------------------------------------------------------- */
+.route-leg {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  background: var(--accent-weak);
+}
+
+.route-leg-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.route-leg-line .route-station {
+  flex: 1 1 120px;
+  min-width: 90px;
+  margin: 0;
+}
+
+.route-leg-line .route-fare {
+  flex: 0 0 90px;
+  width: 90px;
+  text-align: right;
+  margin: 0;
+}
+
+.route-dash {
+  color: var(--muted);
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+
+button.btn.danger.route-remove {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 4px 12px;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.toggle.route-roundtrip {
+  margin-top: 8px;
+  min-height: 34px;
+  padding: 4px 12px;
+  font-size: 0.85rem;
+}
+
+.toggle.route-roundtrip input {
+  width: 16px;
+  height: 16px;
+}
+
+/* -------------------------------------------------------------------------
    14. レスポンシブ（640px以下は1カラム・タップ領域拡大）
    ------------------------------------------------------------------------- */
 @media (max-width: 640px) {

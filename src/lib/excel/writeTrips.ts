@@ -1,12 +1,16 @@
 import ExcelJS from "exceljs";
 import type { Workbook, Worksheet } from "exceljs";
 import type { GenerateRequest, Trip } from "../types";
+import { buildRoute } from "../fare";
 import {
   BLOCK_START_ROWS,
   MAX_TRIPS_PER_SHEET,
   buildTemplateSheet,
   sheetName,
 } from "./template";
+
+/** 1ブロックに書ける経路（G/H列）の最大行数（r..r+3 の4行、H10=SUM(H6:H9)） */
+const MAX_LEGS_PER_TRIP = 4;
 
 const TEMPLATE_PATH = "templates/template.xlsx";
 
@@ -47,21 +51,29 @@ function ensureSheet(wb: Workbook, name: string, fromFile: boolean): Worksheet {
  * 1件の出張を、指定シートの指定ブロック（開始行）に書き込む。
  * 数式セル・結合セルの非アンカー・固定ラベルには一切触れない。
  */
-function writeTripBlock(ws: Worksheet, startRow: number, trip: Trip): void {
+function writeTripBlock(ws: Worksheet, startRow: number, trip: Trip): number {
   const r = startRow;
   ws.getCell(`A${r}`).value = trip.month;
   ws.getCell(`C${r}`).value = trip.day;
   ws.getCell(`E${r}`).value = trip.destination;
   ws.getCell(`E${r + 1}`).value = trip.visitTo;
   ws.getCell(`E${r + 2}`).value = trip.purpose;
-  ws.getCell(`G${r}`).value = trip.route;
-  if (trip.fare != null) ws.getCell(`H${r}`).value = trip.fare;
-  ws.getCell(`I${r}`).value = trip.transitCompany;
+
+  // 経路は区間ごとに G/H 列の各行へ（最大4区間。H10=SUM(H6:H9) が合算する）
+  const filled = trip.routes.filter((l) => l.from || l.to || l.fare != null);
+  const legs = filled.slice(0, MAX_LEGS_PER_TRIP);
+  legs.forEach((leg, i) => {
+    const row = r + i;
+    ws.getCell(`G${row}`).value = buildRoute(leg.from, leg.to, leg.roundTrip);
+    if (leg.fare != null) ws.getCell(`H${row}`).value = leg.fare;
+  });
+
   if (trip.tollParking) ws.getCell(`J${r}`).value = trip.tollParking;
   if (trip.taxi) ws.getCell(`K${r}`).value = trip.taxi;
-  ws.getCell(`L${r}`).value = trip.taxiCompany;
+  if (trip.tollParkingCompany) ws.getCell(`L${r}`).value = trip.tollParkingCompany;
   if (trip.payAllowance && trip.allowance) ws.getCell(`M${r}`).value = trip.allowance;
-  if (trip.lodging) ws.getCell(`N${r}`).value = trip.lodging;
+
+  return Math.max(0, filled.length - MAX_LEGS_PER_TRIP);
 }
 
 /** ヘッダー部・請求部を書き込む */
@@ -117,7 +129,12 @@ export async function generateWorkbook(req: GenerateRequest): Promise<GenerateRe
 
     trips.forEach((trip, i) => {
       if (i >= MAX_TRIPS_PER_SHEET) return;
-      writeTripBlock(ws, BLOCK_START_ROWS[i], trip);
+      const dropped = writeTripBlock(ws, BLOCK_START_ROWS[i], trip);
+      if (dropped > 0) {
+        warnings.push(
+          `シート ${name} の ${i + 1}件目「${trip.destination || "（未入力）"}」: 経路が${MAX_LEGS_PER_TRIP}区間を超えたため、${dropped}区間が書き込まれませんでした。`
+        );
+      }
     });
 
     if (trips.length > MAX_TRIPS_PER_SHEET) {

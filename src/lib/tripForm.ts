@@ -1,3 +1,4 @@
+import { emptyLeg } from "./fare";
 import type { Trip } from "./types";
 
 let counter = 0;
@@ -16,27 +17,27 @@ export function emptyTrip(): Trip {
     destination: "",
     visitTo: "",
     purpose: "",
-    route: "",
-    fare: null,
-    fareAuto: false,
-    transitCompany: "",
+    routes: [emptyLeg()],
     tollParking: 0,
+    tollParkingCompany: "",
     taxi: 0,
-    taxiCompany: "",
     payAllowance: false,
     allowance: 0,
-    lodging: 0,
   };
+}
+
+/** 経路（全区間）の運賃合計 */
+export function routesFareTotal(t: Trip): number {
+  return t.routes.reduce((s, leg) => s + (leg.fare ?? 0), 0);
 }
 
 /** 1件の合計金額 */
 export function tripTotal(t: Trip): number {
   return (
-    (t.fare ?? 0) +
+    routesFareTotal(t) +
     t.tollParking +
     t.taxi +
-    (t.payAllowance ? t.allowance : 0) +
-    t.lodging
+    (t.payAllowance ? t.allowance : 0)
   );
 }
 

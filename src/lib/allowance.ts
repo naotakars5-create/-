@@ -18,6 +18,6 @@ export function getAllowance(position: Position): number {
  * 日当の支給条件は未確定のため、現時点では常に false（ユーザーが画面でトグル）。
  * ルール確定後はこの関数に自動判定を実装し、UI 側の初期値に反映する。
  */
-export function shouldPayAllowance(_trip: Pick<Trip, "destination" | "route" | "lodging">): boolean {
+export function shouldPayAllowance(_trip: Pick<Trip, "destination" | "routes">): boolean {
   return false;
 }

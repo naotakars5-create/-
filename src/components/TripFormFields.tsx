@@ -1,7 +1,8 @@
 "use client";
 
 import { useId, useState } from "react";
-import type { Trip } from "@/lib/types";
+import { emptyLeg } from "@/lib/fare";
+import type { RouteLeg, Trip } from "@/lib/types";
 
 /** 用務の選択肢（「その他」を選ぶと自由入力になる） */
 const PURPOSE_PRESETS = ["顧客打ち合わせ", "ロケ"] as const;
@@ -11,9 +12,8 @@ interface HistoryValues {
   destination?: string[];
   visitTo?: string[];
   purpose?: string[];
-  route?: string[];
-  transitCompany?: string[];
-  taxiCompany?: string[];
+  station?: string[];
+  tollParkingCompany?: string[];
 }
 
 interface Props {
@@ -55,13 +55,27 @@ export default function TripFormFields({ trip, onChange, historyValues, dateOnly
     }
   }
 
+  // --- 経路（複数区間）の操作 ---
+  const routes = trip.routes.length > 0 ? trip.routes : [emptyLeg()];
+  function patchLeg(index: number, patch: Partial<RouteLeg>) {
+    onChange({
+      routes: routes.map((l, i) => (i === index ? { ...l, ...patch } : l)),
+    });
+  }
+  function addLeg() {
+    onChange({ routes: [...routes, emptyLeg()] });
+  }
+  function removeLeg(index: number) {
+    const next = routes.filter((_, i) => i !== index);
+    onChange({ routes: next.length > 0 ? next : [emptyLeg()] });
+  }
+
   const dl = {
     destination: `${uid}-destination`,
     visitTo: `${uid}-visitTo`,
     purpose: `${uid}-purpose`,
-    route: `${uid}-route`,
-    transitCompany: `${uid}-transitCompany`,
-    taxiCompany: `${uid}-taxiCompany`,
+    station: `${uid}-station`,
+    tollParkingCompany: `${uid}-tollParkingCompany`,
   };
   return (
     <div>
@@ -141,48 +155,83 @@ export default function TripFormFields({ trip, onChange, historyValues, dateOnly
         </div>
       </div>
 
+      {/* 鉄道・バス経路（駅名2つ＋往復＋運賃を1区間として、複数追加できる） */}
       <div className="field">
-        <label>経路</label>
-        <input
-          value={trip.route}
-          list={dl.route}
-          disabled={lock}
-          onChange={(e) => onChange({ route: e.target.value })}
-        />
-        <DataList id={dl.route} values={historyValues?.route} />
-      </div>
-
-      <div className="grid2">
-        <div className="field">
-          <label>鉄道・バス運賃（円）{trip.fare == null && !lock && " ※マスタ未ヒット・要手入力"}</label>
-          <input
-            type="number"
-            value={trip.fare ?? ""}
-            placeholder="手入力"
-            disabled={lock}
-            onChange={(e) =>
-              onChange({
-                fare: e.target.value === "" ? null : num(e.target.value),
-                fareAuto: false, // 手入力で上書きしたら「要確認」表示は消す
-              })
-            }
-          />
-          {trip.fareAuto && !lock && (
-            <div className="notice info" style={{ marginTop: 6, padding: "6px 10px" }}>
-              🔍 Google マップの経路検索から自動取得した金額です。念のためご確認ください。
+        <label>鉄道・バス経路（出発駅 − 到着駅 と運賃）</label>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {routes.map((leg, i) => (
+            <div key={i} className="route-leg">
+              <div className="route-leg-line">
+                <input
+                  className="route-station"
+                  value={leg.from}
+                  list={dl.station}
+                  disabled={lock}
+                  placeholder="出発駅（例: 千葉）"
+                  aria-label="出発駅"
+                  onChange={(e) => patchLeg(i, { from: e.target.value })}
+                />
+                <span className="route-dash" aria-hidden>
+                  −
+                </span>
+                <input
+                  className="route-station"
+                  value={leg.to}
+                  list={dl.station}
+                  disabled={lock}
+                  placeholder="到着駅（例: 品川）"
+                  aria-label="到着駅"
+                  onChange={(e) => patchLeg(i, { to: e.target.value })}
+                />
+                <input
+                  className="route-fare"
+                  type="number"
+                  value={leg.fare ?? ""}
+                  disabled={lock}
+                  placeholder="運賃"
+                  aria-label="運賃（円）"
+                  onChange={(e) =>
+                    patchLeg(i, { fare: e.target.value === "" ? null : num(e.target.value) })
+                  }
+                />
+                <span className="muted" style={{ fontSize: "0.85rem" }}>
+                  円
+                </span>
+                {routes.length > 1 && !lock && (
+                  <button
+                    type="button"
+                    className="btn danger route-remove"
+                    onClick={() => removeLeg(i)}
+                    title="この区間を削除"
+                    aria-label="この区間を削除"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+              <label className="toggle route-roundtrip">
+                <input
+                  type="checkbox"
+                  checked={leg.roundTrip}
+                  disabled={lock}
+                  onChange={(e) => patchLeg(i, { roundTrip: e.target.checked })}
+                />
+                往復
+              </label>
             </div>
-          )}
+          ))}
         </div>
-        <div className="field">
-          <label>利用会社</label>
-          <input
-            value={trip.transitCompany}
-            list={dl.transitCompany}
-            disabled={lock}
-            onChange={(e) => onChange({ transitCompany: e.target.value })}
-          />
-          <DataList id={dl.transitCompany} values={historyValues?.transitCompany} />
-        </div>
+        <DataList id={dl.station} values={historyValues?.station} />
+        {!lock && (
+          <button
+            type="button"
+            className="btn secondary"
+            style={{ marginTop: 10 }}
+            onClick={addLeg}
+          >
+            ＋ 経路を追加
+          </button>
+        )}
       </div>
 
       <div className="grid3">
@@ -196,6 +245,16 @@ export default function TripFormFields({ trip, onChange, historyValues, dateOnly
           />
         </div>
         <div className="field">
+          <label>利用会社（コインパーキング等）</label>
+          <input
+            value={trip.tollParkingCompany}
+            list={dl.tollParkingCompany}
+            disabled={lock}
+            onChange={(e) => onChange({ tollParkingCompany: e.target.value })}
+          />
+          <DataList id={dl.tollParkingCompany} values={historyValues?.tollParkingCompany} />
+        </div>
+        <div className="field">
           <label>タクシー代</label>
           <input
             type="number"
@@ -204,40 +263,19 @@ export default function TripFormFields({ trip, onChange, historyValues, dateOnly
             onChange={(e) => onChange({ taxi: num(e.target.value) })}
           />
         </div>
-        <div className="field">
-          <label>利用会社（タクシー）</label>
-          <input
-            value={trip.taxiCompany}
-            list={dl.taxiCompany}
-            disabled={lock}
-            onChange={(e) => onChange({ taxiCompany: e.target.value })}
-          />
-          <DataList id={dl.taxiCompany} values={historyValues?.taxiCompany} />
-        </div>
       </div>
 
-      <div className="grid2">
-        <div className="field">
-          <label>宿泊料</label>
+      <div className="field">
+        <label>日当（役職より自動: {trip.allowance}円）</label>
+        <label className="toggle">
           <input
-            type="number"
-            value={trip.lodging}
+            type="checkbox"
+            checked={trip.payAllowance}
             disabled={lock}
-            onChange={(e) => onChange({ lodging: num(e.target.value) })}
+            onChange={(e) => onChange({ payAllowance: e.target.checked })}
           />
-        </div>
-        <div className="field">
-          <label>日当（役職より自動: {trip.allowance}円）</label>
-          <label className="toggle">
-            <input
-              type="checkbox"
-              checked={trip.payAllowance}
-              disabled={lock}
-              onChange={(e) => onChange({ payAllowance: e.target.checked })}
-            />
-            日当を付ける
-          </label>
-        </div>
+          日当を付ける
+        </label>
       </div>
     </div>
   );

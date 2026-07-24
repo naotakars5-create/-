@@ -8,6 +8,7 @@ import {
   recordHistory,
   removeHistory,
   tripFromHistory,
+  uniqueStations,
   uniqueValues,
   type TripHistoryEntry,
 } from "@/lib/history";
@@ -202,9 +203,8 @@ function InputScreen({
       destination: uniqueValues(history, "destination"),
       visitTo: uniqueValues(history, "visitTo"),
       purpose: uniqueValues(history, "purpose"),
-      route: uniqueValues(history, "route"),
-      transitCompany: uniqueValues(history, "transitCompany"),
-      taxiCompany: uniqueValues(history, "taxiCompany"),
+      station: uniqueStations(history),
+      tollParkingCompany: uniqueValues(history, "tollParkingCompany"),
     }),
     [history]
   );
