@@ -6,6 +6,8 @@ export const POSITIONS = [
   "部次長・参事",
   "部長・担当部長",
   "局長",
+  "担当局長",
+  "役員",
 ] as const;
 
 export type Position = (typeof POSITIONS)[number];

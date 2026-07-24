@@ -219,21 +219,20 @@ function Settings({
           <input value={`${getAllowance(profile.position)} 円`} disabled />
         </div>
       </div>
-      <div className="grid2">
-        <div className="field">
-          <label>自家用車の単価（円/km）</label>
-          <DecimalInput
-            value={profile.carUnitPrice}
-            placeholder="例: 15.5"
-            ariaLabel="自家用車の単価（円/km）"
-            onChange={(n) => onChange({ ...profile, carUnitPrice: n })}
-          />
-        </div>
-        <div className="field">
-          <label> </label>
-          <div className="muted" style={{ fontSize: "0.8rem", paddingTop: 6 }}>
-            ガソリン代で毎月変わる場合は、月初にここを更新してください。以降に追加する出張はこの単価で計算されます。
+      <div className="field">
+        <label>自家用車の単価（円/km）</label>
+        <div style={{ display: "flex", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
+          <div style={{ flex: "0 0 auto", width: 160 }}>
+            <DecimalInput
+              value={profile.carUnitPrice}
+              placeholder="例: 15.5"
+              ariaLabel="自家用車の単価（円/km）"
+              onChange={(n) => onChange({ ...profile, carUnitPrice: n })}
+            />
           </div>
+          <p className="muted" style={{ flex: "1 1 200px", fontSize: "0.8rem", margin: 0 }}>
+            ガソリン代で毎月変わる場合は、月初にここを更新してください。以降に追加する出張はこの単価で計算されます。
+          </p>
         </div>
       </div>
     </div>
@@ -886,7 +885,8 @@ function OutputScreen({
 
   return (
     <div>
-      <div className="card">
+      <div className="card card-primary">
+        <strong className="card-primary-title">Excelを出力</strong>
         <div className="grid2">
           <div className="field">
             <label>対象年（シートの年）</label>

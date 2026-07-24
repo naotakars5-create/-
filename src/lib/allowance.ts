@@ -8,6 +8,9 @@ export const ALLOWANCE_BY_POSITION: Record<Position, number> = {
   "部次長・参事": 1450,
   "部長・担当部長": 1650,
   局長: 1750,
+  // ↓ 日当額は仮の値（局長と同額）。正しい金額が分かり次第、更新してください。
+  担当局長: 1750,
+  役員: 1750,
 };
 
 export function getAllowance(position: Position): number {

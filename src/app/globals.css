@@ -130,6 +130,20 @@ header p {
   box-shadow: var(--shadow-sm);
 }
 
+/* メインの出力カード（対象年）。他のカードより目立たせる */
+.card.card-primary {
+  border: 2px solid var(--accent);
+  background: var(--accent-weak);
+  box-shadow: var(--shadow-md);
+}
+
+.card-primary-title {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 1.05rem;
+  color: var(--accent);
+}
+
 /* -------------------------------------------------------------------------
    6. フォーム共通（label / input / select / textarea）
    ------------------------------------------------------------------------- */
