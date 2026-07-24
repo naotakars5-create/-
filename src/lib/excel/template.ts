@@ -136,6 +136,10 @@ export function buildTemplateSheet(wb: Workbook, name: string): Worksheet {
         if (col === 12) {
           cell.alignment = { vertical: "middle", shrinkToFit: true };
         }
+        // G列（経路）は、長い経路名を折り返して複数行で表示する
+        if (col === 7) {
+          cell.alignment = { vertical: "top", wrapText: true };
+        }
       }
     }
     ws.getCell(`A${r}`).alignment = { horizontal: "center", vertical: "middle" };

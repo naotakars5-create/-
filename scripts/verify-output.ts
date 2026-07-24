@@ -65,6 +65,13 @@ async function main() {
   // 宿泊料は廃止したので N 列には何も書かれないこと
   check(ws.getCell("N6").value == null, `N6(宿泊料 廃止) に値が残っている: ${ws.getCell("N6").value}`);
 
+  // 経路は折り返し表示。長い経路の行は高さが広がって2行分見えること
+  check(ws.getCell("G6").alignment?.wrapText === true, `G6(経路) が折り返し設定になっていない`);
+  check(
+    (ws.getRow(6).height ?? 0) >= 30,
+    `行6(長い経路) の高さが広がっていない: ${ws.getRow(6).height}`
+  );
+
   // 2件目（開始行11, 6月20日）: 日付昇順で同一シートの2ブロック目に並ぶ
   check(
     ws.getCell("G11").value === "千葉-幕張豊砂駅(往復)",
