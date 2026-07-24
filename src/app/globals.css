@@ -1,14 +1,45 @@
+/* =========================================================================
+   旅費精算書 入力アプリ — globals.css（Claude Design によるリデザイン版）
+   方針: CSSフレームワーク不使用 / :root のCSS変数で色を管理 / 既存クラス名は不変。
+        JSXは変更せず、見た目（余白・階層・状態表現）だけを洗練させる。
+   ========================================================================= */
+
+/* -------------------------------------------------------------------------
+   1. デザイントークン（色・角丸・影・余白）
+   ------------------------------------------------------------------------- */
 :root {
-  --bg: #f5f6f8;
+  /* --- 面と境界（清潔感のある寒色寄りニュートラル） --- */
+  --bg: #eef1f5;
   --card: #ffffff;
-  --border: #d9dde3;
-  --accent: #2563eb;
-  --accent-weak: #eff4ff;
-  --text: #1f2430;
-  --muted: #6b7280;
-  --danger: #dc2626;
+  --border: #dde2e9;
+  --border-strong: #c6ccd6;
+
+  /* --- 文字（AA以上を確保） --- */
+  --text: #1b2333;
+  --muted: #5c6675;
+
+  /* --- アクセント（信頼感のある青系） --- */
+  --accent: #2159d6;
+  --accent-strong: #17429f;
+  --accent-weak: #eaf1ff;
+  --accent-ring: rgba(33, 89, 214, 0.28);
+
+  /* --- 危険（削除・エラー） --- */
+  --danger: #cf2b2b;
+  --danger-weak: #fdecec;
+
+  /* --- かたち・奥行き --- */
+  --radius: 10px;
+  --radius-sm: 8px;
+  --radius-pill: 999px;
+  --shadow-sm: 0 1px 2px rgba(20, 30, 55, 0.06);
+  --shadow-md: 0 2px 4px rgba(20, 30, 55, 0.06), 0 8px 20px rgba(20, 30, 55, 0.06);
+  --ring-width: 3px;
 }
 
+/* -------------------------------------------------------------------------
+   2. ベース
+   ------------------------------------------------------------------------- */
 * {
   box-sizing: border-box;
 }
@@ -22,41 +53,58 @@ body {
   font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
   font-size: 15px;
   line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 .container {
   max-width: 860px;
   margin: 0 auto;
-  padding: 16px;
+  padding: 24px 16px 48px;
 }
 
+/* -------------------------------------------------------------------------
+   3. ヘッダー（h1 / p）
+   ------------------------------------------------------------------------- */
 header h1 {
-  font-size: 1.25rem;
-  margin: 8px 0 4px;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  margin: 4px 0 4px;
 }
 
 header p {
   color: var(--muted);
-  margin: 0 0 12px;
+  margin: 0 0 20px;
   font-size: 0.85rem;
 }
 
+/* -------------------------------------------------------------------------
+   4. タブ（.tabs / .tabs button / .active）
+   ------------------------------------------------------------------------- */
 .tabs {
   display: flex;
-  gap: 4px;
+  gap: 2px;
   border-bottom: 1px solid var(--border);
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
 }
 
 .tabs button {
   border: none;
   background: none;
-  padding: 10px 14px;
+  padding: 11px 16px;
   cursor: pointer;
   font-size: 0.95rem;
   color: var(--muted);
   border-bottom: 2px solid transparent;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.tabs button:hover {
+  color: var(--text);
+  background: rgba(33, 89, 214, 0.05);
 }
 
 .tabs button.active {
@@ -65,98 +113,224 @@ header p {
   font-weight: 600;
 }
 
+.tabs button:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--accent-ring);
+}
+
+/* -------------------------------------------------------------------------
+   5. カード（.card）
+   ------------------------------------------------------------------------- */
 .card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 16px;
+  border-radius: var(--radius);
+  padding: 20px;
   margin-bottom: 16px;
+  box-shadow: var(--shadow-sm);
 }
 
+/* -------------------------------------------------------------------------
+   6. フォーム共通（label / input / select / textarea）
+   ------------------------------------------------------------------------- */
 label {
   display: block;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
+  font-weight: 600;
   color: var(--muted);
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  letter-spacing: 0.01em;
 }
 
 input,
 select,
 textarea {
   width: 100%;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  padding: 10px 12px;
+  min-height: 42px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
   font-size: 0.95rem;
+  font-family: inherit;
   background: #fff;
   color: var(--text);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+input::placeholder,
+textarea::placeholder {
+  color: #9aa3b0;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 var(--ring-width) var(--accent-ring);
+}
+
+/* セレクトに独自の矢印を付け、ネイティブ矢印は隠す（見た目統一） */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 38px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%235c6675' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5 6 6.5 11 1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+/* disabled（ロックされた入力欄）: 「編集不可」だと一目でわかる見た目 */
 input:disabled,
 select:disabled,
 textarea:disabled {
-  background: #f1f3f5;
   color: var(--muted);
+  border-color: var(--border);
   cursor: not-allowed;
+  background-color: #f1f3f6;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(92, 102, 117, 0.055) 0,
+    rgba(92, 102, 117, 0.055) 1px,
+    transparent 1px,
+    transparent 7px
+  );
+  box-shadow: none;
+}
+
+select:disabled {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%239aa3b0' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5 6 6.5 11 1.5'/%3E%3C/svg%3E"),
+    repeating-linear-gradient(-45deg, rgba(92,102,117,0.055) 0, rgba(92,102,117,0.055) 1px, transparent 1px, transparent 7px);
+  background-repeat: no-repeat, repeat;
+  background-position: right 12px center, 0 0;
 }
 
 textarea {
   resize: vertical;
-  min-height: 72px;
+  min-height: 84px;
+  line-height: 1.5;
 }
 
+/* -------------------------------------------------------------------------
+   7. レイアウトグリッド（.grid2 / .grid3 / .field）
+   ------------------------------------------------------------------------- */
 .grid2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 14px;
 }
 
 .grid3 {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 12px;
+  gap: 14px;
 }
 
 .field {
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
+.field:last-child {
+  margin-bottom: 0;
+}
+
+/* -------------------------------------------------------------------------
+   8. ボタン（.btn / .secondary / .ghost / .danger / :disabled）
+   ------------------------------------------------------------------------- */
 button.btn {
-  border: none;
-  border-radius: 8px;
-  padding: 10px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 10px 18px;
+  min-height: 42px;
   font-size: 0.95rem;
+  font-family: inherit;
   cursor: pointer;
   background: var(--accent);
   color: #fff;
   font-weight: 600;
+  box-shadow: var(--shadow-sm);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease,
+    transform 0.05s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+button.btn:hover {
+  background: var(--accent-strong);
+}
+
+button.btn:active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+button.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 var(--ring-width) var(--accent-ring);
 }
 
 button.btn.secondary {
   background: var(--accent-weak);
   color: var(--accent);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+button.btn.secondary:hover {
+  background: #dbe6ff;
 }
 
 button.btn.ghost {
-  background: none;
+  background: #fff;
   color: var(--muted);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
+  box-shadow: none;
+}
+
+button.btn.ghost:hover {
+  background: #f6f8fb;
+  color: var(--text);
+  border-color: var(--muted);
 }
 
 button.btn.danger {
-  background: none;
+  background: #fff;
   color: var(--danger);
   border: 1px solid var(--danger);
+  box-shadow: none;
 }
 
-button:disabled {
-  opacity: 0.5;
+button.btn.danger:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+button.btn.danger:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 var(--ring-width) rgba(207, 43, 43, 0.28);
+}
+
+button:disabled,
+button.btn:disabled {
+  opacity: 0.45;
   cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
+button.btn:disabled:hover {
+  background: var(--accent);
+}
+button.btn.secondary:disabled:hover { background: var(--accent-weak); }
+button.btn.ghost:disabled:hover { background: #fff; color: var(--muted); border-color: var(--border-strong); }
+button.btn.danger:disabled:hover { background: #fff; color: var(--danger); }
+
+/* -------------------------------------------------------------------------
+   9. 行・部品（.row / .mic）
+   ------------------------------------------------------------------------- */
 .row {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
   flex-wrap: wrap;
 }
@@ -168,78 +342,204 @@ button:disabled {
   font-size: 1.6rem;
   display: grid;
   place-items: center;
+  border: 1px solid var(--border-strong);
+  background: #fff;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.mic:hover {
+  border-color: var(--accent);
+  background: var(--accent-weak);
 }
 
 .mic.recording {
   background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
   animation: pulse 1.2s infinite;
 }
 
 @keyframes pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.5);
+    box-shadow: 0 0 0 0 rgba(207, 43, 43, 0.45);
   }
   50% {
-    box-shadow: 0 0 0 12px rgba(220, 38, 38, 0);
+    box-shadow: 0 0 0 12px rgba(207, 43, 43, 0);
   }
 }
 
+/* -------------------------------------------------------------------------
+   10. 出張アイテム（.trip-item / .head）
+   ------------------------------------------------------------------------- */
 .trip-item {
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 8px;
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  margin-bottom: 10px;
+  background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.trip-item:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
 }
 
 .trip-item .head {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
 }
 
+/* -------------------------------------------------------------------------
+   11. テキスト・合計（.muted / .total）
+   ------------------------------------------------------------------------- */
 .muted {
   color: var(--muted);
   font-size: 0.85rem;
 }
 
 .total {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
 }
 
+/* -------------------------------------------------------------------------
+   12. 通知バー（.notice / .info / .error）
+   ------------------------------------------------------------------------- */
 .notice {
-  padding: 10px 12px;
-  border-radius: 8px;
+  padding: 11px 14px;
+  border-radius: var(--radius-sm);
   font-size: 0.88rem;
-  margin-bottom: 12px;
-}
-
-.notice.error {
-  background: #fef2f2;
-  color: var(--danger);
+  margin-bottom: 14px;
+  border: 1px solid transparent;
+  border-left-width: 4px;
 }
 
 .notice.info {
   background: var(--accent-weak);
-  color: var(--accent);
+  color: var(--accent-strong);
+  border-color: rgba(33, 89, 214, 0.18);
+  border-left-color: var(--accent);
 }
 
+.notice.error {
+  background: var(--danger-weak);
+  color: var(--danger);
+  border-color: rgba(207, 43, 43, 0.2);
+  border-left-color: var(--danger);
+}
+
+/* -------------------------------------------------------------------------
+   13. トグル（.toggle：チェックボックス＋ラベル）
+   ------------------------------------------------------------------------- */
 .toggle {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 0.9rem;
   color: var(--text);
+  padding: 8px 12px;
+  min-height: 42px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.toggle:hover {
+  border-color: var(--accent);
+  background: var(--accent-weak);
 }
 
 .toggle input {
-  width: auto;
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
 }
 
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--accent);
+}
+
+/* -------------------------------------------------------------------------
+   14. レスポンシブ（640px以下は1カラム・タップ領域拡大）
+   ------------------------------------------------------------------------- */
 @media (max-width: 640px) {
+  .container {
+    padding: 16px 12px 40px;
+  }
+
   .grid2,
   .grid3 {
     grid-template-columns: 1fr;
+  }
+
+  input,
+  select,
+  textarea,
+  button.btn,
+  .toggle {
+    min-height: 46px;
+    font-size: 1rem;
+  }
+
+  .tabs button {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   15. ダークモード（OS設定に追従）
+   ------------------------------------------------------------------------- */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12151c;
+    --card: #1b1f28;
+    --border: #2b313d;
+    --border-strong: #3a4150;
+    --text: #e8ebf0;
+    --muted: #9aa3b2;
+    --accent: #6f9dff;
+    --accent-strong: #8fb4ff;
+    --accent-weak: #1e2740;
+    --accent-ring: rgba(111, 157, 255, 0.35);
+    --danger: #ff6b6b;
+    --danger-weak: #2a1a1c;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.4), 0 8px 20px rgba(0, 0, 0, 0.5);
+  }
+
+  input,
+  select,
+  textarea {
+    background: #141821;
+  }
+
+  input:disabled,
+  select:disabled,
+  textarea:disabled {
+    background-color: #171b23;
+  }
+
+  button.btn {
+    color: #0e1017;
+  }
+
+  button.btn.ghost,
+  button.btn.danger,
+  .mic,
+  .toggle {
+    background: var(--card);
   }
 }
