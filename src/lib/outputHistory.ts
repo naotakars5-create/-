@@ -10,6 +10,7 @@ export interface OutputHistoryEntry {
   amount: number; // 合計金額
   count: number; // 件数
   year?: number; // 対象年（年ごとの累計に使う）。古い記録には無い場合がある
+  months?: MonthCumulative[]; // 月ごとの内訳。古い記録には無い場合がある
   // 再出力用のスナップショット（この履歴をクリックすると同じ内容を再生成する）。
   // 古い記録には無い場合がある。
   request?: GenerateRequest;
@@ -18,6 +19,13 @@ export interface OutputHistoryEntry {
 /** 年ごとの累計（金額・件数） */
 export interface YearCumulative {
   year: number;
+  amount: number;
+  count: number;
+}
+
+/** 月ごとの合計（金額・件数） */
+export interface MonthCumulative {
+  month: number; // 1-12
   amount: number;
   count: number;
 }
@@ -38,6 +46,34 @@ export function cumulativeByYear(entries: OutputHistoryEntry[]): YearCumulative[
   return [...map.entries()]
     .map(([year, v]) => ({ year, amount: v.amount, count: v.count }))
     .sort((a, b) => b.year - a.year);
+}
+
+/** 1件の出力の月別内訳を返す（無ければ期間の先頭月に全額を割り当てる） */
+function entryMonths(e: OutputHistoryEntry): MonthCumulative[] {
+  if (e.months && e.months.length > 0) return e.months;
+  const startMonth = parseInt(e.periodLabel, 10); // "6/12〜..." → 6
+  if (Number.isFinite(startMonth) && startMonth >= 1 && startMonth <= 12) {
+    return [{ month: startMonth, amount: e.amount, count: e.count }];
+  }
+  return [];
+}
+
+/** 指定した年の、月ごとの合計を返す（月の昇順） */
+export function monthlyByYear(entries: OutputHistoryEntry[], year: number): MonthCumulative[] {
+  const map = new Map<number, { amount: number; count: number }>();
+  for (const e of entries) {
+    const y = e.year ?? e.request?.year ?? new Date(e.at).getFullYear();
+    if (y !== year) continue;
+    for (const m of entryMonths(e)) {
+      const cur = map.get(m.month) ?? { amount: 0, count: 0 };
+      cur.amount += m.amount;
+      cur.count += m.count;
+      map.set(m.month, cur);
+    }
+  }
+  return [...map.entries()]
+    .map(([month, v]) => ({ month, amount: v.amount, count: v.count }))
+    .sort((a, b) => a.month - b.month);
 }
 
 function isBrowser(): boolean {

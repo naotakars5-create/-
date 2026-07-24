@@ -625,6 +625,47 @@ button.btn.secondary.history-chip {
   font-size: 0.95rem;
 }
 
+button.year-cum-toggle {
+  width: 100%;
+  font-family: inherit;
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+button.year-cum-toggle:hover {
+  border-color: var(--accent);
+  background: #dbe6ff;
+}
+
+.year-cum-caret {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.year-cum-months {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 0 6px 16px;
+}
+
+.year-cum-month-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 10px;
+  font-size: 0.85rem;
+  border-left: 2px solid var(--border-strong);
+}
+
+@media (prefers-color-scheme: dark) {
+  button.year-cum-toggle:hover {
+    background: var(--accent-weak);
+  }
+}
+
 button.output-history-main {
   flex: 1;
   display: flex;

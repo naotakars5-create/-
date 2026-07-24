@@ -19,6 +19,7 @@ import {
   clearOutputHistory,
   cumulativeByYear,
   loadOutputHistory,
+  monthlyByYear,
   recordOutput,
   removeOutputAt,
   type OutputHistoryEntry,
@@ -663,6 +664,8 @@ function OutputScreen({
   const [warnings, setWarnings] = useState<string[]>([]);
   // 出力（Excel生成）の簡易履歴（期間・金額・件数）
   const [outputHistory, setOutputHistory] = useState<OutputHistoryEntry[]>([]);
+  // 年ごとの累計で、展開して月別内訳を表示している年
+  const [expandedYear, setExpandedYear] = useState<number | null>(null);
   useEffect(() => {
     setOutputHistory(loadOutputHistory());
   }, []);
@@ -715,13 +718,25 @@ function OutputScreen({
     try {
       const request: GenerateRequest = { profile, trips: selectedTrips, year, claimDate };
       await downloadRequest(request);
-      // 出力履歴（期間・金額・件数＋再出力用スナップショット）を残す
+      // 月ごとの内訳（年→月の展開表示に使う）
+      const monthMap = new Map<number, { amount: number; count: number }>();
+      for (const t of selectedTrips) {
+        const cur = monthMap.get(t.month) ?? { amount: 0, count: 0 };
+        cur.amount += tripTotal(t);
+        cur.count += 1;
+        monthMap.set(t.month, cur);
+      }
+      const months = [...monthMap.entries()]
+        .map(([month, v]) => ({ month, amount: v.amount, count: v.count }))
+        .sort((a, b) => a.month - b.month);
+      // 出力履歴（期間・金額・件数・月別内訳＋再出力用スナップショット）を残す
       setOutputHistory(
         recordOutput({
           periodLabel: periodLabelOf(selectedTrips),
           amount: selectedTotal,
           count: selectedTrips.length,
           year,
+          months,
           request,
         })
       );
@@ -753,17 +768,48 @@ function OutputScreen({
       <div className="card">
         <strong style={{ display: "block", marginBottom: 8 }}>年ごとの累計（出力した分）</strong>
         <div className="output-history">
-          {yearlyCumulative.map((y) => (
-            <div key={y.year} className="year-cum-row">
-              <span style={{ flex: 1 }}>
-                <strong>{y.year}年</strong> ／ {y.count} 件
-              </span>
-              <strong>{y.amount.toLocaleString()} 円</strong>
-            </div>
-          ))}
+          {yearlyCumulative.map((y) => {
+            const open = expandedYear === y.year;
+            const months = open ? monthlyByYear(outputHistory, y.year) : [];
+            return (
+              <div key={y.year}>
+                <button
+                  type="button"
+                  className="year-cum-row year-cum-toggle"
+                  aria-expanded={open}
+                  onClick={() => setExpandedYear(open ? null : y.year)}
+                  title="クリックで月ごとの内訳を表示"
+                >
+                  <span className="year-cum-caret">{open ? "▼" : "▶"}</span>
+                  <span style={{ flex: 1, textAlign: "left" }}>
+                    <strong>{y.year}年</strong> ／ {y.count} 件
+                  </span>
+                  <strong>{y.amount.toLocaleString()} 円</strong>
+                </button>
+                {open && (
+                  <div className="year-cum-months">
+                    {months.length === 0 ? (
+                      <div className="muted" style={{ fontSize: "0.8rem", padding: "4px 10px" }}>
+                        月ごとの内訳がありません（古い記録）。
+                      </div>
+                    ) : (
+                      months.map((m) => (
+                        <div key={m.month} className="year-cum-month-row">
+                          <span style={{ flex: 1 }}>
+                            {m.month}月 ／ {m.count} 件
+                          </span>
+                          <span>{m.amount.toLocaleString()} 円</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
         <div className="muted" style={{ marginTop: 6, fontSize: "0.8rem" }}>
-          ※ 出力（Excel生成）した回数を年ごとに合計しています。同じ内容を複数回出力すると重複して加算されます。
+          ※ 出力（Excel生成）した回数を年ごとに合計しています。年をクリックすると月ごとの内訳が出ます。同じ内容を複数回出力すると重複して加算されます。
         </div>
       </div>
     ) : null;
