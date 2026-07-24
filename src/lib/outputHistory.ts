@@ -46,6 +46,18 @@ export function recordOutput(entry: Omit<OutputHistoryEntry, "at">): OutputHisto
   return next;
 }
 
+/** 出力履歴を1件だけ消す（新しい順の一覧での位置 index を指定）。更新後の一覧を返す */
+export function removeOutputAt(index: number): OutputHistoryEntry[] {
+  if (!isBrowser()) return [];
+  const next = loadOutputHistory().filter((_, i) => i !== index);
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    // 保存失敗は致命的ではないため無視する
+  }
+  return next;
+}
+
 /** 出力履歴をすべて消す */
 export function clearOutputHistory(): OutputHistoryEntry[] {
   if (!isBrowser()) return [];

@@ -18,6 +18,7 @@ import {
   clearOutputHistory,
   loadOutputHistory,
   recordOutput,
+  removeOutputAt,
   type OutputHistoryEntry,
 } from "@/lib/outputHistory";
 import { loadTripsState, saveTripsState } from "@/lib/tripStore";
@@ -653,6 +654,14 @@ function OutputScreen({
                 期間 <strong>{h.periodLabel || "―"}</strong> ／ {h.count} 件
               </span>
               <strong>{h.amount.toLocaleString()} 円</strong>
+              <button
+                className="btn danger output-history-del"
+                title="この履歴を削除"
+                aria-label="この履歴を削除"
+                onClick={() => setOutputHistory(removeOutputAt(i))}
+              >
+                ×
+              </button>
             </div>
           ))}
         </div>

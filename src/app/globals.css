@@ -588,6 +588,14 @@ button.btn.danger.route-remove {
   flex-wrap: wrap;
 }
 
+button.btn.danger.output-history-del {
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 2px 10px;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
 /* -------------------------------------------------------------------------
    14. レスポンシブ（640px以下は1カラム・タップ領域拡大）
    ------------------------------------------------------------------------- */
