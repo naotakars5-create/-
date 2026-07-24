@@ -14,6 +14,12 @@ import {
   type TripHistoryEntry,
 } from "@/lib/history";
 import { loadProfile, saveProfile } from "@/lib/profile";
+import {
+  clearOutputHistory,
+  loadOutputHistory,
+  recordOutput,
+  type OutputHistoryEntry,
+} from "@/lib/outputHistory";
 import { loadTripsState, saveTripsState } from "@/lib/tripStore";
 import { emptyTrip, totalAmount, tripTotal } from "@/lib/tripForm";
 import { POSITIONS, type Position, type Trip, type UserProfile } from "@/lib/types";
@@ -528,6 +534,23 @@ function ListScreen({
   );
 }
 
+/** 出力対象の期間ラベルを作る（例: 6/12〜6/20。単日なら 6/12） */
+function periodLabelOf(trips: Trip[]): string {
+  if (trips.length === 0) return "";
+  const keys = trips.map((t) => t.month * 100 + t.day);
+  const min = Math.min(...keys);
+  const max = Math.max(...keys);
+  const fmt = (k: number) => `${Math.floor(k / 100)}/${k % 100}`;
+  return min === max ? fmt(min) : `${fmt(min)}〜${fmt(max)}`;
+}
+
+/** 出力履歴の生成時刻を「M/D HH:MM」で表示する */
+function formatOutputAt(at: number): string {
+  const d = new Date(at);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function OutputScreen({
   profile,
   selectedTrips,
@@ -541,6 +564,11 @@ function OutputScreen({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
+  // 出力（Excel生成）の簡易履歴（期間・金額・件数）
+  const [outputHistory, setOutputHistory] = useState<OutputHistoryEntry[]>([]);
+  useEffect(() => {
+    setOutputHistory(loadOutputHistory());
+  }, []);
 
   const selectedTotal = totalAmount(selectedTrips);
   // 含まれる月ごとの件数（プレビュー表示用）
@@ -582,6 +610,15 @@ function OutputScreen({
       a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
+
+      // 出力履歴（期間・金額・件数）を残す
+      setOutputHistory(
+        recordOutput({
+          periodLabel: periodLabelOf(selectedTrips),
+          amount: selectedTotal,
+          count: selectedTrips.length,
+        })
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "生成に失敗しました");
     } finally {
@@ -589,45 +626,84 @@ function OutputScreen({
     }
   }
 
+  const historyCard =
+    outputHistory.length > 0 ? (
+      <div className="card">
+        <div className="row" style={{ justifyContent: "space-between", marginBottom: 8 }}>
+          <strong>出力の履歴</strong>
+          <button
+            className="btn ghost"
+            style={{ padding: "6px 12px", minHeight: "auto" }}
+            onClick={() => {
+              if (window.confirm("出力履歴をすべて消しますか？")) {
+                setOutputHistory(clearOutputHistory());
+              }
+            }}
+          >
+            履歴を消す
+          </button>
+        </div>
+        <div className="output-history">
+          {outputHistory.map((h, i) => (
+            <div key={i} className="output-history-row">
+              <span className="muted" style={{ fontSize: "0.8rem", minWidth: 76 }}>
+                {formatOutputAt(h.at)}
+              </span>
+              <span style={{ flex: 1 }}>
+                期間 <strong>{h.periodLabel || "―"}</strong> ／ {h.count} 件
+              </span>
+              <strong>{h.amount.toLocaleString()} 円</strong>
+            </div>
+          ))}
+        </div>
+      </div>
+    ) : null;
+
   if (selectedTrips.length === 0) {
     return (
-      <div className="card muted">
-        出力する出張が選択されていません。「一覧」タブで出力したい出張にチェックを入れてください。
+      <div>
+        <div className="card muted">
+          出力する出張が選択されていません。「一覧」タブで出力したい出張にチェックを入れてください。
+        </div>
+        {historyCard}
       </div>
     );
   }
 
   return (
-    <div className="card">
-      <div className="grid2">
-        <div className="field">
-          <label>対象年（シートの年）</label>
-          <input type="number" value={year} onChange={(e) => setYear(Number(e.target.value))} />
+    <div>
+      <div className="card">
+        <div className="grid2">
+          <div className="field">
+            <label>対象年（シートの年）</label>
+            <input type="number" value={year} onChange={(e) => setYear(Number(e.target.value))} />
+          </div>
+          <div className="field">
+            <label>請求日</label>
+            <input type="date" value={claimDate} onChange={(e) => setClaimDate(e.target.value)} />
+          </div>
         </div>
-        <div className="field">
-          <label>請求日</label>
-          <input type="date" value={claimDate} onChange={(e) => setClaimDate(e.target.value)} />
+
+        <div className="notice info">
+          出力対象: <strong>{selectedTrips.length} 件</strong>（
+          {byMonth.map(([m, c]) => `${m}月 ${c}件`).join(" / ")}） ／ 合計{" "}
+          {selectedTotal.toLocaleString()} 円
+          <br />
+          月ごとにシートを分けます。1シートは6件まで。7件目以降は同じ月の2枚目・3枚目のシートに自動で続きます。
         </div>
+
+        {error && <div className="notice error">{error}</div>}
+        {warnings.map((w, i) => (
+          <div key={i} className="notice error">
+            ⚠ {w}
+          </div>
+        ))}
+
+        <button className="btn" onClick={generate} disabled={busy}>
+          {busy ? "生成中…" : "Excelを生成してダウンロード"}
+        </button>
       </div>
-
-      <div className="notice info">
-        出力対象: <strong>{selectedTrips.length} 件</strong>（
-        {byMonth.map(([m, c]) => `${m}月 ${c}件`).join(" / ")}） ／ 合計{" "}
-        {selectedTotal.toLocaleString()} 円
-        <br />
-        月ごとにシートを分けます。1シートは6件まで。7件目以降は同じ月の2枚目・3枚目のシートに自動で続きます。
-      </div>
-
-      {error && <div className="notice error">{error}</div>}
-      {warnings.map((w, i) => (
-        <div key={i} className="notice error">
-          ⚠ {w}
-        </div>
-      ))}
-
-      <button className="btn" onClick={generate} disabled={busy}>
-        {busy ? "生成中…" : "Excelを生成してダウンロード"}
-      </button>
+      {historyCard}
     </div>
   );
 }

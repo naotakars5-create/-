@@ -568,6 +568,27 @@ button.btn.danger.route-remove {
 }
 
 /* -------------------------------------------------------------------------
+   13.6 出力の履歴（期間・件数・金額の一覧）
+   ------------------------------------------------------------------------- */
+.output-history {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.output-history-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--accent-weak);
+  font-size: 0.9rem;
+  flex-wrap: wrap;
+}
+
+/* -------------------------------------------------------------------------
    14. レスポンシブ（640px以下は1カラム・タップ領域拡大）
    ------------------------------------------------------------------------- */
 @media (max-width: 640px) {
