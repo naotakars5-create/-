@@ -1,4 +1,5 @@
-import type { Trip } from "./types";
+import { emptyLeg } from "./fare";
+import type { RouteLeg, Trip } from "./types";
 
 const STORAGE_KEY = "travel-expense-history-v1";
 const MAX_ENTRIES = 50;
@@ -12,6 +13,69 @@ function isBrowser(): boolean {
   return typeof window !== "undefined";
 }
 
+/** 旧形式の経路文字列（例: 千葉-鎌ケ谷大仏(往復)）を1区間に変換する */
+function parseLegFromString(route: string, fare: number | null): RouteLeg {
+  let s = route.trim();
+  let roundTrip = false;
+  const m = s.match(/[(（]\s*往復\s*[)）]\s*$/);
+  if (m && m.index != null) {
+    roundTrip = true;
+    s = s.slice(0, m.index).trim();
+  }
+  // ハイフン類（-, −, –, —, 〜, ~）を区切りとして最初の1つで分割
+  const idx = s.search(/[-−–—〜~]/);
+  const from = idx >= 0 ? s.slice(0, idx).trim() : s;
+  const to = idx >= 0 ? s.slice(idx + 1).trim() : "";
+  return { from, to, roundTrip, fare };
+}
+
+/**
+ * 保存済みエントリを現行の型に正規化する。
+ * 旧形式（route 文字列・fare・taxiCompany 等を持ち routes が無い）でも
+ * クラッシュせずに読めるよう移行する。
+ */
+function migrateEntry(e: unknown): TripHistoryEntry | null {
+  if (!e || typeof e !== "object") return null;
+  const o = e as Record<string, unknown>;
+
+  const str = (v: unknown): string => (typeof v === "string" ? v : "");
+  const numOr = (v: unknown, d: number): number => (typeof v === "number" ? v : d);
+  const fareOf = (v: unknown): number | null => (typeof v === "number" ? v : null);
+
+  // 経路: 現行の routes 配列があれば各区間を補完、無ければ旧 route 文字列から生成
+  let routes: RouteLeg[];
+  if (Array.isArray(o.routes)) {
+    routes = (o.routes as unknown[]).map((l) => {
+      const leg = (l ?? {}) as Record<string, unknown>;
+      return {
+        from: str(leg.from),
+        to: str(leg.to),
+        roundTrip: leg.roundTrip === true,
+        fare: fareOf(leg.fare),
+      };
+    });
+  } else if (str(o.route).trim() !== "") {
+    routes = [parseLegFromString(str(o.route), fareOf(o.fare))];
+  } else {
+    routes = [emptyLeg()];
+  }
+  if (routes.length === 0) routes = [emptyLeg()];
+
+  return {
+    destination: str(o.destination),
+    visitTo: str(o.visitTo),
+    purpose: str(o.purpose),
+    routes,
+    tollParking: numOr(o.tollParking, 0),
+    // 旧: L列の利用会社は taxiCompany（無ければ transitCompany）に入っていた
+    tollParkingCompany: str(o.tollParkingCompany) || str(o.taxiCompany) || str(o.transitCompany),
+    taxi: numOr(o.taxi, 0),
+    payAllowance: o.payAllowance === true,
+    allowance: numOr(o.allowance, 0),
+    lastUsedAt: numOr(o.lastUsedAt, 0),
+  };
+}
+
 /** 履歴一覧を読み込む（新しく使ったもの順）。ブラウザ内 localStorage のみ、サーバには送らない */
 export function loadHistory(): TripHistoryEntry[] {
   if (!isBrowser()) return [];
@@ -20,7 +84,9 @@ export function loadHistory(): TripHistoryEntry[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed;
+    return parsed
+      .map(migrateEntry)
+      .filter((e): e is TripHistoryEntry => e !== null);
   } catch {
     return [];
   }
@@ -28,7 +94,7 @@ export function loadHistory(): TripHistoryEntry[] {
 
 /** 経路を文字列化する（キー生成用） */
 function routesToKey(routes: Trip["routes"]): string {
-  return routes
+  return (routes ?? [])
     .map((l) => `${l.from.trim()}>${l.to.trim()}${l.roundTrip ? "(往復)" : ""}`)
     .join(",");
 }
@@ -91,7 +157,7 @@ export function tripFromHistory(entry: TripHistoryEntry, newId: string): Trip {
   const { lastUsedAt: _lastUsedAt, ...rest } = entry;
   return {
     ...rest,
-    routes: entry.routes.map((l) => ({ ...l })),
+    routes: (entry.routes ?? [emptyLeg()]).map((l) => ({ ...l })),
     id: newId,
     month: now.getMonth() + 1,
     day: now.getDate(),
@@ -115,7 +181,7 @@ export function uniqueValues(
 export function uniqueStations(history: TripHistoryEntry[]): string[] {
   const set = new Set<string>();
   for (const e of history) {
-    for (const l of e.routes) {
+    for (const l of e.routes ?? []) {
       if (l.from.trim()) set.add(l.from.trim());
       if (l.to.trim()) set.add(l.to.trim());
     }
