@@ -224,20 +224,23 @@ export default function TripFormFields({ trip, onChange, historyValues, dateOnly
                   aria-label="到着駅"
                   onChange={(e) => patchLeg(i, { to: e.target.value })}
                 />
-                <input
-                  className="route-fare"
-                  type="number"
-                  value={leg.fare ?? ""}
-                  disabled={lock}
-                  placeholder="運賃"
-                  aria-label="運賃（円）"
-                  onChange={(e) =>
-                    patchLeg(i, { fare: e.target.value === "" ? null : num(e.target.value) })
-                  }
-                />
-                <span className="muted" style={{ fontSize: "0.85rem" }}>
-                  円
-                </span>
+                <div className="route-fare-wrap">
+                  <div className="route-fare-row">
+                    <input
+                      className="route-fare"
+                      type="number"
+                      value={leg.fare ?? ""}
+                      disabled={lock}
+                      placeholder="運賃"
+                      aria-label="運賃（円・片道）"
+                      onChange={(e) =>
+                        patchLeg(i, { fare: e.target.value === "" ? null : num(e.target.value) })
+                      }
+                    />
+                    <span className="muted route-yen">円</span>
+                  </div>
+                  <span className="route-fare-hint">片道運賃</span>
+                </div>
                 {routes.length > 1 && !lock && (
                   <button
                     type="button"
@@ -250,15 +253,20 @@ export default function TripFormFields({ trip, onChange, historyValues, dateOnly
                   </button>
                 )}
               </div>
-              <label className="toggle route-roundtrip">
-                <input
-                  type="checkbox"
-                  checked={leg.roundTrip}
-                  disabled={lock}
-                  onChange={(e) => patchLeg(i, { roundTrip: e.target.checked })}
-                />
-                往復
-              </label>
+              <div className="route-roundtrip-row">
+                <label className="toggle route-roundtrip">
+                  <input
+                    type="checkbox"
+                    checked={leg.roundTrip}
+                    disabled={lock}
+                    onChange={(e) => patchLeg(i, { roundTrip: e.target.checked })}
+                  />
+                  往復
+                </label>
+                <span className="route-roundtrip-note">
+                  チェックすると料金が2倍で計上されます
+                </span>
+              </div>
             </div>
           ))}
         </div>

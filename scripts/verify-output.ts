@@ -66,6 +66,13 @@ async function main() {
     ws2.getCell("K6").value === 1200,
     `2026_6_2 K6(タクシー) 不一致: ${ws2.getCell("K6").value}`
   );
+  // 往復は片道運賃の2倍で計上（千葉-幕張豊砂駅 片道410 → 820）
+  check(
+    ws2.getCell("H6").value === 820,
+    `2026_6_2 H6(往復2倍計上) 不一致: ${ws2.getCell("H6").value}`
+  );
+  // 片道区間はそのまま（幕張豊砂駅-海浜幕張 はマスタ未ヒットで空欄）
+  check(ws2.getCell("H7").value == null, `2026_6_2 H7(片道・マスタ外) 不一致: ${ws2.getCell("H7").value}`);
 
   // 固定ラベルに触れていないか
   check(ws.getCell("B6").value === "/", `B6 固定ラベル破損: ${ws.getCell("B6").value}`);

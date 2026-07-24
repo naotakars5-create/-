@@ -494,11 +494,48 @@ input[type="radio"] {
   margin: 0;
 }
 
-.route-leg-line .route-fare {
+.route-fare-wrap {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.route-fare-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.route-fare-row .route-fare {
   flex: 0 0 90px;
   width: 90px;
   text-align: right;
   margin: 0;
+}
+
+.route-yen {
+  font-size: 0.85rem;
+}
+
+.route-fare-hint {
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1;
+}
+
+.route-roundtrip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.route-roundtrip-note {
+  font-size: 0.72rem;
+  color: var(--muted);
 }
 
 .route-dash {
@@ -516,10 +553,10 @@ button.btn.danger.route-remove {
 }
 
 .toggle.route-roundtrip {
-  margin-top: 8px;
   min-height: 34px;
   padding: 4px 12px;
   font-size: 0.85rem;
+  flex: 0 0 auto;
 }
 
 .toggle.route-roundtrip input {

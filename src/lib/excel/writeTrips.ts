@@ -2,6 +2,7 @@ import ExcelJS from "exceljs";
 import type { Workbook, Worksheet } from "exceljs";
 import type { GenerateRequest, Trip } from "../types";
 import { buildRoute } from "../fare";
+import { legFare } from "../tripForm";
 import {
   BLOCK_START_ROWS,
   MAX_TRIPS_PER_SHEET,
@@ -65,7 +66,8 @@ function writeTripBlock(ws: Worksheet, startRow: number, trip: Trip): number {
   legs.forEach((leg, i) => {
     const row = r + i;
     ws.getCell(`G${row}`).value = buildRoute(leg.from, leg.to, leg.roundTrip);
-    if (leg.fare != null) ws.getCell(`H${row}`).value = leg.fare;
+    // 入力は片道運賃。往復チェック時は2倍で計上する
+    if (leg.fare != null) ws.getCell(`H${row}`).value = legFare(leg);
   });
 
   if (trip.tollParking) ws.getCell(`J${r}`).value = trip.tollParking;

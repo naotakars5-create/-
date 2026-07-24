@@ -25,9 +25,9 @@ function makeTrip(partial: Partial<Trip> & Pick<Trip, "id" | "month" | "day">): 
   };
 }
 
-/** 駅名ペアから経路区間を作る（運賃はマスタから引く） */
+/** 駅名ペアから経路区間を作る（運賃は片道額。往復は出力時に2倍計上される） */
 function leg(from: string, to: string, roundTrip: boolean) {
-  return { from, to, roundTrip, fare: getFare(from, to, roundTrip) };
+  return { from, to, roundTrip, fare: getFare(from, to, false) };
 }
 
 async function main() {

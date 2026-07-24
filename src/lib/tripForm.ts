@@ -26,9 +26,14 @@ export function emptyTrip(): Trip {
   };
 }
 
-/** 経路（全区間）の運賃合計 */
+/** 1区間の計上額（片道運賃。往復チェック時は2倍で計上する） */
+export function legFare(leg: { fare: number | null; roundTrip: boolean }): number {
+  return (leg.fare ?? 0) * (leg.roundTrip ? 2 : 1);
+}
+
+/** 経路（全区間）の運賃合計（往復は2倍で計上） */
 export function routesFareTotal(t: Trip): number {
-  return t.routes.reduce((s, leg) => s + (leg.fare ?? 0), 0);
+  return t.routes.reduce((s, leg) => s + legFare(leg), 0);
 }
 
 /** 1件の合計金額 */
