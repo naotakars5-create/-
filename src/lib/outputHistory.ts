@@ -9,9 +9,35 @@ export interface OutputHistoryEntry {
   periodLabel: string; // 期間（例: 6/12〜6/20）
   amount: number; // 合計金額
   count: number; // 件数
+  year?: number; // 対象年（年ごとの累計に使う）。古い記録には無い場合がある
   // 再出力用のスナップショット（この履歴をクリックすると同じ内容を再生成する）。
   // 古い記録には無い場合がある。
   request?: GenerateRequest;
+}
+
+/** 年ごとの累計（金額・件数） */
+export interface YearCumulative {
+  year: number;
+  amount: number;
+  count: number;
+}
+
+/**
+ * 出力履歴を年ごとに集計して累計を返す（新しい年が上）。
+ * 年は 対象年 を優先し、無ければ出力した日の年で補う。
+ */
+export function cumulativeByYear(entries: OutputHistoryEntry[]): YearCumulative[] {
+  const map = new Map<number, { amount: number; count: number }>();
+  for (const e of entries) {
+    const year = e.year ?? e.request?.year ?? new Date(e.at).getFullYear();
+    const cur = map.get(year) ?? { amount: 0, count: 0 };
+    cur.amount += e.amount;
+    cur.count += e.count;
+    map.set(year, cur);
+  }
+  return [...map.entries()]
+    .map(([year, v]) => ({ year, amount: v.amount, count: v.count }))
+    .sort((a, b) => b.year - a.year);
 }
 
 function isBrowser(): boolean {

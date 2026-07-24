@@ -16,6 +16,7 @@ import {
 import { loadProfile, saveProfile } from "@/lib/profile";
 import {
   clearOutputHistory,
+  cumulativeByYear,
   loadOutputHistory,
   recordOutput,
   removeOutputAt,
@@ -695,6 +696,7 @@ function OutputScreen({
           periodLabel: periodLabelOf(selectedTrips),
           amount: selectedTotal,
           count: selectedTrips.length,
+          year,
           request,
         })
       );
@@ -719,6 +721,27 @@ function OutputScreen({
       setBusy(false);
     }
   }
+
+  const yearlyCumulative = cumulativeByYear(outputHistory);
+  const cumulativeCard =
+    yearlyCumulative.length > 0 ? (
+      <div className="card">
+        <strong style={{ display: "block", marginBottom: 8 }}>年ごとの累計（出力した分）</strong>
+        <div className="output-history">
+          {yearlyCumulative.map((y) => (
+            <div key={y.year} className="year-cum-row">
+              <span style={{ flex: 1 }}>
+                <strong>{y.year}年</strong> ／ {y.count} 件
+              </span>
+              <strong>{y.amount.toLocaleString()} 円</strong>
+            </div>
+          ))}
+        </div>
+        <div className="muted" style={{ marginTop: 6, fontSize: "0.8rem" }}>
+          ※ 出力（Excel生成）した回数を年ごとに合計しています。同じ内容を複数回出力すると重複して加算されます。
+        </div>
+      </div>
+    ) : null;
 
   const historyCard =
     outputHistory.length > 0 ? (
@@ -784,6 +807,7 @@ function OutputScreen({
         <div className="card muted">
           出力する出張が選択されていません。「一覧」タブで出力したい出張にチェックを入れてください。
         </div>
+        {cumulativeCard}
         {historyCard}
       </div>
     );
@@ -822,6 +846,7 @@ function OutputScreen({
           {busy ? "生成中…" : "Excelを生成してダウンロード"}
         </button>
       </div>
+      {cumulativeCard}
       {historyCard}
     </div>
   );
