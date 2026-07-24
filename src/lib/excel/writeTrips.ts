@@ -128,7 +128,8 @@ function writeSheetTotals(ws: Worksheet, trips: Trip[]): void {
 
 /** ヘッダー部・請求部を書き込む */
 function writeHeader(ws: Worksheet, req: GenerateRequest): void {
-  // I1 =「氏名」ラベル（テンプレ側で設定済）。J1:O1（結合）= 氏名（姓名まとめて）。
+  // G1 = 所属。I1 =「氏名」ラベル（テンプレ側）。J1:O1（結合）= 氏名（姓名まとめて）。
+  ws.getCell("G1").value = req.profile.department;
   ws.getCell("J1").value = req.profile.name;
 
   const d = new Date(req.claimDate);

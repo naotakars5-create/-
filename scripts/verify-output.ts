@@ -35,7 +35,10 @@ async function main() {
   check(formula("H25") === "SUM(H21:H24)", `H25 数式欠落/不一致: ${formula("H25")}`);
   check(formula("M39") === "SUM(M36:O38)", `M39 数式不一致: ${formula("M39")}`);
 
-  // ヘッダー: I1=「氏名」ラベル、J1(結合)=氏名（姓名まとめて）
+  // ヘッダー: G1=所属、I1=「氏名」ラベル、J1(結合)=氏名（姓名まとめて）
+  check(ws.getCell("G1").value === "営業部", `G1(所属) 不一致: ${ws.getCell("G1").value}`);
+  check(!String(ws.getCell("G1").value ?? "").includes("局"), `G1 に「局」が残っている: ${ws.getCell("G1").value}`);
+  check(ws.getCell("H1").value == null, `H1 に値が残っている（局の消し漏れ）: ${ws.getCell("H1").value}`);
   check(ws.getCell("I1").value === "氏名", `I1(氏名ラベル) 不一致: ${ws.getCell("I1").value}`);
   check(ws.getCell("J1").value === "山田　太郎", `J1(氏名) 不一致: ${ws.getCell("J1").value}`);
   check(

@@ -34,8 +34,8 @@ export function buildTemplateSheet(wb: Workbook, name: string): Worksheet {
     pageSetup: { paperSize: 9, orientation: "landscape", fitToPage: true },
   });
 
-  // 列幅（A..P）
-  const widths = [4, 2.5, 4, 5, 9, 9, 16, 10, 8, 10, 9, 8, 8, 9, 6, 6];
+  // 列幅（A..P）。L列（利用会社）は社名が入るよう広めにする
+  const widths = [4, 2.5, 4, 5, 9, 9, 16, 10, 8, 10, 9, 15, 8, 9, 6, 6];
   widths.forEach((w, i) => (ws.getColumn(i + 1).width = w));
 
   // ---- 1行目（タイトル・所属/氏名） ----
@@ -43,8 +43,7 @@ export function buildTemplateSheet(wb: Workbook, name: string): Worksheet {
   ws.getCell("A1").font = { size: 14, bold: true };
   ws.getCell("E1").value = "旅行者";
   ws.getCell("F1").value = "所属";
-  // 実測どおりの固定文言（全期間で一致。同一組織の業務局ラベル）
-  ws.getCell("G1").value = "　　　       業務         局";
+  // G1 = 所属（値）。アプリ側が書き込む（旧・固定文言「業務局」は廃止）。
   // I1 = 「氏名」ラベル。J1:O1(結合) = 氏名（姓名まとめて）。値はアプリ側が書き込む。
   ws.getCell("I1").value = "氏名";
   ws.mergeCells("J1:O1");
@@ -132,6 +131,10 @@ export function buildTemplateSheet(wb: Workbook, name: string): Worksheet {
         cell.border = BORDER_ALL;
         if (col >= 8 && col <= 16 && col !== 9 && col !== 12) {
           cell.numFmt = MONEY_FMT;
+        }
+        // L列（利用会社）は、列幅を超える社名でも自動で縮小して収める
+        if (col === 12) {
+          cell.alignment = { vertical: "middle", shrinkToFit: true };
         }
       }
     }
