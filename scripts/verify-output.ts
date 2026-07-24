@@ -65,11 +65,14 @@ async function main() {
   // 宿泊料は廃止したので N 列には何も書かれないこと
   check(ws.getCell("N6").value == null, `N6(宿泊料 廃止) に値が残っている: ${ws.getCell("N6").value}`);
 
-  // 経路は折り返し表示。長い経路の行は高さが広がって2行分見えること
+  // 経路は折り返し表示。長い経路（G6=千葉-鎌ケ谷大仏(往復)）は小さめフォントで、
+  // それでも収まらないぶんだけ行高を控えめに広げる
   check(ws.getCell("G6").alignment?.wrapText === true, `G6(経路) が折り返し設定になっていない`);
+  const g6Font = ws.getCell("G6").font as { size?: number } | undefined;
+  check(g6Font?.size === 9, `G6(長い経路) が小さめフォント(9pt)になっていない: ${g6Font?.size}`);
   check(
-    (ws.getRow(6).height ?? 0) >= 30,
-    `行6(長い経路) の高さが広がっていない: ${ws.getRow(6).height}`
+    (ws.getRow(6).height ?? 0) >= 24 && (ws.getRow(6).height ?? 0) <= 30,
+    `行6(長い経路) の高さが想定外: ${ws.getRow(6).height}`
   );
 
   // 2件目（開始行11, 6月20日）: 日付昇順で同一シートの2ブロック目に並ぶ

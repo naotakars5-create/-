@@ -13,21 +13,22 @@ import {
 /** 1ブロックに書ける経路（G/H列）の最大行数（r..r+3 の4行、H10=SUM(H6:H9)） */
 const MAX_LEGS_PER_TRIP = 4;
 
-/** G列（経路）の実質的な文字容量（半角換算）と1行の基準高さ */
-const ROUTE_COL_CAPACITY = 15;
-const BASE_ROW_HEIGHT = 15;
+/**
+ * G列（経路）の表示調整。
+ * - 通常フォントで収まる容量を超える経路は、フォントを小さく（9pt）して
+ *   1行に収まりやすくする（印刷時に枚数が増えないように）。
+ * - それでも収まらない場合だけ、行数に応じて行高を広げる（小さめの行高）。
+ */
+const ROUTE_NORMAL_CAPACITY = 16; // 通常フォントで1行に収まる表示幅（半角換算）
+const ROUTE_SMALL_CAPACITY = 19; // 小さめフォント（9pt）で1行に収まる表示幅
+const ROUTE_SMALL_FONT_SIZE = 9;
+const ROUTE_SMALL_LINE_HEIGHT = 12; // 小さめフォント時の1行あたりの高さ
 
 /** 全角=2, 半角=1 として表示幅を概算する */
 function displayWidth(s: string): number {
   let w = 0;
   for (const ch of s) w += ch.charCodeAt(0) > 0xff ? 2 : 1;
   return w;
-}
-
-/** 経路名が G列の幅に収まる行数（1以上）。長ければ折り返して複数行にする */
-function routeLineCount(text: string): number {
-  if (!text) return 1;
-  return Math.max(1, Math.ceil(displayWidth(text) / ROUTE_COL_CAPACITY));
 }
 
 const TEMPLATE_PATH = "templates/template.xlsx";
@@ -106,12 +107,19 @@ function writeTripBlock(ws: Worksheet, startRow: number, trip: Trip): number {
   legs.forEach((leg, i) => {
     const row = r + i;
     const routeText = buildRoute(leg.from, leg.to, leg.roundTrip);
-    ws.getCell(`G${row}`).value = routeText;
+    const cell = ws.getCell(`G${row}`);
+    cell.value = routeText;
     // 入力は片道運賃。往復チェック時は2倍で計上する
     if (leg.fare != null) ws.getCell(`H${row}`).value = legFare(leg);
-    // 経路が長い場合は行の高さを広げて、折り返した2行目以降も見えるようにする
-    const lines = routeLineCount(routeText);
-    if (lines > 1) ws.getRow(row).height = lines * BASE_ROW_HEIGHT;
+
+    // 通常フォントで収まらない長い経路は、文字を小さく（9pt）して1行に収めやすくする
+    const w = displayWidth(routeText);
+    if (w > ROUTE_NORMAL_CAPACITY) {
+      cell.font = { size: ROUTE_SMALL_FONT_SIZE };
+      const lines = Math.max(1, Math.ceil(w / ROUTE_SMALL_CAPACITY));
+      // 小さくしても収まらないぶんだけ、行の高さを控えめに広げる
+      if (lines > 1) ws.getRow(row).height = lines * ROUTE_SMALL_LINE_HEIGHT;
+    }
   });
 
   const amt = tripColumnAmounts(trip);
