@@ -149,6 +149,10 @@ export default function Page() {
             setTrips([]);
             setSelectedIds(new Set());
           }}
+          onDeleteSelected={() => {
+            setTrips((prev) => prev.filter((t) => !selectedIds.has(t.id)));
+            setSelectedIds(new Set());
+          }}
         />
       )}
       {tab === "output" && <OutputScreen profile={profile} selectedTrips={selectedTrips} />}
@@ -429,6 +433,7 @@ function ListScreen({
   onSetAllSelected,
   onGoOutput,
   onDeleteAll,
+  onDeleteSelected,
 }: {
   trips: Trip[];
   total: number;
@@ -438,6 +443,7 @@ function ListScreen({
   onSetAllSelected: (ids: string[], on: boolean) => void;
   onGoOutput: () => void;
   onDeleteAll: () => void;
+  onDeleteSelected: () => void;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -491,6 +497,17 @@ function ListScreen({
           <button
             className="btn danger"
             style={{ marginLeft: "auto" }}
+            disabled={selectedCount === 0}
+            onClick={() => {
+              if (window.confirm(`チェックした ${selectedCount} 件を削除しますか？（この操作は元に戻せません）`)) {
+                onDeleteSelected();
+              }
+            }}
+          >
+            チェックした {selectedCount} 件を削除
+          </button>
+          <button
+            className="btn danger"
             onClick={() => {
               if (window.confirm(`登録済みの ${trips.length} 件をすべて削除しますか？（この操作は元に戻せません）`)) {
                 onDeleteAll();
