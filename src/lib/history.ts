@@ -2,7 +2,8 @@ import { emptyLeg } from "./fare";
 import type { RouteLeg, Trip } from "./types";
 
 const STORAGE_KEY = "travel-expense-history-v1";
-const MAX_ENTRIES = 50;
+/** 「過去に追加した出張」の履歴として保存する最大件数 */
+export const MAX_HISTORY_ENTRIES = 5;
 
 /** 出張パターンの履歴（日付・IDを除いた、繰り返し使える項目のみ） */
 export type TripHistoryEntry = Omit<Trip, "id" | "month" | "day"> & {
@@ -110,7 +111,7 @@ function historyKey(
 
 /**
  * 確定した出張を履歴に記録する（新しい順、同一パターンは上書きして先頭へ）。
- * 最大 MAX_ENTRIES 件まで保持する。
+ * 最大 MAX_HISTORY_ENTRIES 件まで保持する。
  */
 export function recordHistory(trips: Trip[]): void {
   if (!isBrowser() || trips.length === 0) return;
@@ -125,7 +126,7 @@ export function recordHistory(trips: Trip[]): void {
 
   const next = [...byKey.values()]
     .sort((a, b) => b.lastUsedAt - a.lastUsedAt)
-    .slice(0, MAX_ENTRIES);
+    .slice(0, MAX_HISTORY_ENTRIES);
 
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));

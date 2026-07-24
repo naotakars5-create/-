@@ -5,6 +5,7 @@ import TripFormFields from "@/components/TripFormFields";
 import { getAllowance } from "@/lib/allowance";
 import {
   loadHistory,
+  MAX_HISTORY_ENTRIES,
   recordHistory,
   removeHistory,
   tripFromHistory,
@@ -13,6 +14,7 @@ import {
   type TripHistoryEntry,
 } from "@/lib/history";
 import { loadProfile, saveProfile } from "@/lib/profile";
+import { loadTripsState, saveTripsState } from "@/lib/tripStore";
 import { emptyTrip, totalAmount, tripTotal } from "@/lib/tripForm";
 import { POSITIONS, type Position, type Trip, type UserProfile } from "@/lib/types";
 
@@ -57,11 +59,23 @@ export default function Page() {
 
   // 過去に選択した出張パターンの履歴（localStorage。ブラウザ内のみ、サーバには送らない）
   const [history, setHistory] = useState<TripHistoryEntry[]>([]);
-  // マウント時に保存済みの設定・履歴を復元する
+  // localStorage からの復元が完了したか（完了前に空の状態で上書き保存しないためのフラグ）
+  const [hydrated, setHydrated] = useState(false);
+  // マウント時に保存済みの設定・履歴・一覧を復元する
   useEffect(() => {
     setProfile(loadProfile());
     setHistory(loadHistory());
+    const saved = loadTripsState();
+    setTrips(saved.trips);
+    setSelectedIds(new Set(saved.selectedIds));
+    setHydrated(true);
   }, []);
+
+  // 一覧（登録済み出張）と選択状態は、変更のたびにブラウザに保存して次回も残す
+  useEffect(() => {
+    if (!hydrated) return;
+    saveTripsState(trips, [...selectedIds]);
+  }, [trips, selectedIds, hydrated]);
 
   // 設定（氏名・所属・役職）を変更のたびにブラウザに保存する
   function updateProfile(p: UserProfile) {
@@ -263,6 +277,9 @@ function InputScreen({
               {manageHistory
                 ? "（不要なものは「削除」で消せます）"
                 : "（選ぶと今日の日付で追加され、日付だけ変更できます）"}
+              <span className="muted" style={{ display: "block", fontSize: "0.8rem", fontWeight: 400, marginTop: 2 }}>
+                ※ よく使う出張を最大{MAX_HISTORY_ENTRIES}件まで自動で保存します（新しいものが優先されます）。
+              </span>
             </label>
             <button
               className="btn ghost"
