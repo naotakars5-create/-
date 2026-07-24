@@ -145,6 +145,10 @@ export default function Page() {
           onToggleSelected={toggleSelected}
           onSetAllSelected={setAllSelected}
           onGoOutput={() => setTab("output")}
+          onDeleteAll={() => {
+            setTrips([]);
+            setSelectedIds(new Set());
+          }}
         />
       )}
       {tab === "output" && <OutputScreen profile={profile} selectedTrips={selectedTrips} />}
@@ -424,6 +428,7 @@ function ListScreen({
   onToggleSelected,
   onSetAllSelected,
   onGoOutput,
+  onDeleteAll,
 }: {
   trips: Trip[];
   total: number;
@@ -432,6 +437,7 @@ function ListScreen({
   onToggleSelected: (id: string) => void;
   onSetAllSelected: (ids: string[], on: boolean) => void;
   onGoOutput: () => void;
+  onDeleteAll: () => void;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -475,12 +481,23 @@ function ListScreen({
           </span>
           <span className="total">選択の合計: {selectedTotal.toLocaleString()} 円</span>
         </div>
-        <div className="row" style={{ marginTop: 8 }}>
+        <div className="row" style={{ marginTop: 8, flexWrap: "wrap" }}>
           <button className="btn ghost" onClick={() => onSetAllSelected(allIds, !allSelected)}>
             {allSelected ? "すべて外す" : "すべて選択"}
           </button>
           <button className="btn" onClick={onGoOutput} disabled={selectedCount === 0}>
             チェックした {selectedCount} 件を出力する →
+          </button>
+          <button
+            className="btn danger"
+            style={{ marginLeft: "auto" }}
+            onClick={() => {
+              if (window.confirm(`登録済みの ${trips.length} 件をすべて削除しますか？（この操作は元に戻せません）`)) {
+                onDeleteAll();
+              }
+            }}
+          >
+            すべて削除
           </button>
         </div>
         <div className="muted" style={{ marginTop: 6 }}>
