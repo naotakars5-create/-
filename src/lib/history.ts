@@ -3,7 +3,7 @@ import type { RouteLeg, Trip } from "./types";
 
 const STORAGE_KEY = "travel-expense-history-v1";
 /** 「過去に追加した出張」の履歴として保存する最大件数 */
-export const MAX_HISTORY_ENTRIES = 5;
+export const MAX_HISTORY_ENTRIES = 30;
 
 /** 出張パターンの履歴（日付・IDを除いた、繰り返し使える項目のみ） */
 export type TripHistoryEntry = Omit<Trip, "id" | "month" | "day"> & {
