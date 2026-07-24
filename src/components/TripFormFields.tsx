@@ -7,6 +7,25 @@ import type { RouteLeg, Trip } from "@/lib/types";
 /** 用務の選択肢（「その他」を選ぶと自由入力になる） */
 const PURPOSE_PRESETS = ["顧客打ち合わせ", "ロケ"] as const;
 
+/** 利用会社（コインパーキング等）の選択肢（「その他」を選ぶと自由入力になる） */
+const PARKING_COMPANY_PRESETS = [
+  "株式会社アップルパーク",
+  "スターツアメニティー株式会社",
+  "三井不動産リアルティ",
+  "大和ハウスパーキング",
+  "日本パーキング株式会社",
+  "株式会社パーキング365",
+  "NEXCO東日本",
+  "和光ファーム株式会社",
+  "タイムズ２４株式会社",
+  "㈱第一興商",
+  "ティエムピー",
+  "新明和工業",
+  "㈱イーシーインター",
+  "INGパーク",
+  "千葉県道路公社",
+] as const;
+
 /** 入力欄のオートコンプリート候補（履歴から集めたユニーク値。省略時は候補なし） */
 interface HistoryValues {
   destination?: string[];
@@ -52,6 +71,28 @@ export default function TripFormFields({ trip, onChange, historyValues, dateOnly
     } else {
       setPurposeOther(false);
       onChange({ purpose: v }); // プリセット、または「選択してください」なら空
+    }
+  }
+
+  // 利用会社: 現在値がプリセット以外（かつ空でない）なら「その他」の自由入力とみなす
+  const companyIsPreset = (PARKING_COMPANY_PRESETS as readonly string[]).includes(
+    trip.tollParkingCompany
+  );
+  const [companyOther, setCompanyOther] = useState(
+    !companyIsPreset && trip.tollParkingCompany !== ""
+  );
+  const companySelectValue = companyOther
+    ? "その他"
+    : companyIsPreset
+      ? trip.tollParkingCompany
+      : "";
+  function handleCompanySelect(v: string) {
+    if (v === "その他") {
+      setCompanyOther(true);
+      onChange({ tollParkingCompany: "" }); // 自由入力欄に入れてもらうため一旦クリア
+    } else {
+      setCompanyOther(false);
+      onChange({ tollParkingCompany: v }); // プリセット、または「選択してください」なら空
     }
   }
 
@@ -246,12 +287,29 @@ export default function TripFormFields({ trip, onChange, historyValues, dateOnly
         </div>
         <div className="field">
           <label>利用会社（コインパーキング等）</label>
-          <input
-            value={trip.tollParkingCompany}
-            list={dl.tollParkingCompany}
+          <select
+            value={companySelectValue}
             disabled={lock}
-            onChange={(e) => onChange({ tollParkingCompany: e.target.value })}
-          />
+            onChange={(e) => handleCompanySelect(e.target.value)}
+          >
+            <option value="">選択してください</option>
+            {PARKING_COMPANY_PRESETS.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+            <option value="その他">その他</option>
+          </select>
+          {companyOther && (
+            <input
+              style={{ marginTop: 6 }}
+              value={trip.tollParkingCompany}
+              list={dl.tollParkingCompany}
+              disabled={lock}
+              placeholder="会社名を入力"
+              onChange={(e) => onChange({ tollParkingCompany: e.target.value })}
+            />
+          )}
           <DataList id={dl.tollParkingCompany} values={historyValues?.tollParkingCompany} />
         </div>
         <div className="field">
