@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "旅費精算書 作成ツール",
+  title: "CTC旅費精算書作成ツール",
   description: "旅費精算書を作成",
 };
 

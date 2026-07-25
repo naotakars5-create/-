@@ -108,7 +108,7 @@ export default function Page() {
   return (
     <div className="container">
       <header>
-        <h1>旅費精算書 作成ツール</h1>
+        <h1>CTC旅費精算書作成ツール</h1>
         <p>設定・履歴はこのブラウザに保存されます</p>
       </header>
 
