@@ -923,6 +923,24 @@ function OutputScreen({
           月ごとにシートを分けます。1シートは6件まで。7件目以降は同じ月の2枚目・3枚目のシートに自動で続きます。
         </div>
 
+        {/* 出力対象の一覧（場所・訪問先・金額をひと目で確認できるように） */}
+        <div className="output-target-list">
+          {[...selectedTrips]
+            .sort((a, b) => a.month - b.month || a.day - b.day)
+            .map((t) => (
+              <div key={t.id} className="output-target-chip" title={`${t.month}/${t.day} ${t.destination}${t.visitTo ? " / " + t.visitTo : ""} ／ ${tripTotal(t).toLocaleString()}円`}>
+                <span className="output-target-date">
+                  {t.month}/{t.day}
+                </span>
+                <span className="output-target-main">
+                  {t.destination || "（未入力）"}
+                  {t.visitTo && ` / ${t.visitTo}`}
+                </span>
+                <span className="output-target-amount">{tripTotal(t).toLocaleString()}円</span>
+              </div>
+            ))}
+        </div>
+
         {error && <div className="notice error">{error}</div>}
         {warnings.map((w, i) => (
           <div key={i} className="notice error">

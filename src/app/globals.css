@@ -614,6 +614,46 @@ button.btn.secondary.history-chip {
 }
 
 /* -------------------------------------------------------------------------
+   13.58 出力対象のチップ（場所・訪問先・金額）
+   ------------------------------------------------------------------------- */
+.output-target-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.output-target-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  font-size: 0.8rem;
+  max-width: 100%;
+}
+
+.output-target-date {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.output-target-main {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.output-target-amount {
+  flex: 0 0 auto;
+  font-weight: 600;
+}
+
+/* -------------------------------------------------------------------------
    13.6 出力の履歴（期間・件数・金額の一覧）
    ------------------------------------------------------------------------- */
 .output-history {
